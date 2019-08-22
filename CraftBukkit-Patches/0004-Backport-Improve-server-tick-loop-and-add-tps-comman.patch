@@ -1,18 +1,12 @@
-From 2a8de27ccd6081078d14311787b105b7bdf2ae05 Mon Sep 17 00:00:00 2001
+From 98cbd050a74f2939476933df249851eda6143ffd Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 00:38:54 -0400
-Subject: [PATCH 4/4] Backport: Improve server tick loop and add /tps command
+Subject: [PATCH] Backport: Improve server tick loop and add /tps command
 
 This patch was backported from Paper 1.14.4 to Canyon and brings an
 important feature to help stamp out lag.
 
 The original author of the patch in Paper is Aikar.
----
- .../com/canyonmodded/command/TpsCommand.java  | 49 ++++++++++
- .../net/minecraft/server/MinecraftServer.java | 98 ++++++++++++++++++-
- .../org/bukkit/craftbukkit/CraftServer.java   |  6 ++
- 3 files changed, 151 insertions(+), 2 deletions(-)
- create mode 100644 src/main/java/com/canyonmodded/command/TpsCommand.java
 
 diff --git a/src/main/java/com/canyonmodded/command/TpsCommand.java b/src/main/java/com/canyonmodded/command/TpsCommand.java
 new file mode 100644

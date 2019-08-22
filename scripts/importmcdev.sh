@@ -15,7 +15,7 @@ export importedmcdev=""
 function import {
     export importedmcdev="$importedmcdev $1"
     file="${1}.java"
-    target="$workdir/Canyon-Server/src/main/java/$nms/$file"
+    target="$basedir/CraftBukkit/src/main/java/$nms/$file"
     base="$decompiledir/$nms/$file"
 
     if [[ ! -f "$target" ]]; then
@@ -28,7 +28,7 @@ function import {
 }
 
 (
-    cd "$workdir/Canyon-Server"
+    cd "$basedir/CraftBukkit"
     lastlog=$($gitcmd log -1 --oneline)
     if [[ "$lastlog" = *"mc-dev Imports"* ]]; then
         $gitcmd reset --hard HEAD^
@@ -37,7 +37,7 @@ function import {
 
 import RegionFile
 
-cd "$workdir/Canyon-Server"
+cd "$basedir/CraftBukkit"
 $gitcmd add . -A >/dev/null 2>&1
 echo -e "mc-dev Imports\n\n$MODLOG" | $gitcmd commit . -F -
 )

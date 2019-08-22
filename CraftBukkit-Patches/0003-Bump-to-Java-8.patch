@@ -1,17 +1,10 @@
-From 08fca40b9c543d2229d35c305d7b6c0711ad772f Mon Sep 17 00:00:00 2001
+From aeeaa300690d46448685bd9e821f9cf74dd37a39 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Wed, 21 Aug 2019 23:52:44 -0400
-Subject: [PATCH 3/4] Bump to Java 8
+Subject: [PATCH] Bump to Java 8
 
 This does not completely convert the server to use Java 8, but it starts
 us on the path.
----
- pom.xml                                       |  8 ++---
- .../bukkit/craftbukkit/util/Java15Compat.java | 34 -------------------
- .../bukkit/craftbukkit/util/LongHashset.java  |  8 ++---
- .../craftbukkit/util/LongHashtable.java       |  4 +--
- 4 files changed, 10 insertions(+), 44 deletions(-)
- delete mode 100644 src/main/java/org/bukkit/craftbukkit/util/Java15Compat.java
 
 diff --git a/pom.xml b/pom.xml
 index 25f664d3..31d534fb 100644

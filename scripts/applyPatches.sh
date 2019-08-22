@@ -69,7 +69,7 @@ function applyPatch {
 
 echo "Importing MC Dev"
 
-./scripts/importmcdev.sh "$basedir" >/dev/null 2>&1
+./scripts/importmcdev.sh "$basedir"
 
 # Apply Canyon
 cd "$basedir"

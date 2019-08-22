@@ -1,12 +1,8 @@
-From 985eaa6970c5a2a3855daa786ecbe4c95acec3c6 Mon Sep 17 00:00:00 2001
+From 9842dbd24e885b18fc9191002939c27dcf660f58 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Wed, 21 Aug 2019 23:46:10 -0400
-Subject: [PATCH 2/4] Rebrand to Canyon
+Subject: [PATCH] Rebrand to Canyon
 
----
- pom.xml                                              | 12 ++++++------
- .../java/org/bukkit/craftbukkit/CraftServer.java     |  2 +-
- 2 files changed, 7 insertions(+), 7 deletions(-)
 
 diff --git a/pom.xml b/pom.xml
 index 6b94dd16..25f664d3 100644
