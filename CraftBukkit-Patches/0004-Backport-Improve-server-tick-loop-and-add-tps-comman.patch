@@ -1,0 +1,222 @@
+From 2a8de27ccd6081078d14311787b105b7bdf2ae05 Mon Sep 17 00:00:00 2001
+From: Andrew Steinborn <git@steinborn.me>
+Date: Thu, 22 Aug 2019 00:38:54 -0400
+Subject: [PATCH 4/4] Backport: Improve server tick loop and add /tps command
+
+This patch was backported from Paper 1.14.4 to Canyon and brings an
+important feature to help stamp out lag.
+
+The original author of the patch in Paper is Aikar.
+---
+ .../com/canyonmodded/command/TpsCommand.java  | 49 ++++++++++
+ .../net/minecraft/server/MinecraftServer.java | 98 ++++++++++++++++++-
+ .../org/bukkit/craftbukkit/CraftServer.java   |  6 ++
+ 3 files changed, 151 insertions(+), 2 deletions(-)
+ create mode 100644 src/main/java/com/canyonmodded/command/TpsCommand.java
+
+diff --git a/src/main/java/com/canyonmodded/command/TpsCommand.java b/src/main/java/com/canyonmodded/command/TpsCommand.java
+new file mode 100644
+index 00000000..716e89b6
+--- /dev/null
++++ b/src/main/java/com/canyonmodded/command/TpsCommand.java
+@@ -0,0 +1,49 @@
++package com.canyonmodded.command;
++
++import net.minecraft.server.MinecraftServer;
++import org.bukkit.ChatColor;
++import org.bukkit.command.Command;
++import org.bukkit.command.CommandSender;
++
++import java.text.DecimalFormat;
++
++public class TpsCommand extends Command {
++    private final MinecraftServer server;
++
++    public TpsCommand(MinecraftServer server) {
++        super("tps");
++        this.server = server;
++        this.description = "Obtains the current server TPS rate.";
++    }
++
++    @Override
++    public boolean execute(CommandSender sender, String label, String[] args) {
++        String str = ChatColor.GOLD + "TPS over the last 1, 5, 15 minutes: ";
++
++        double avg1 = server.tps1.getAverage();
++        double avg5 = server.tps5.getAverage();
++        double avg15 = server.tps15.getAverage();
++
++        DecimalFormat fmt = new DecimalFormat("#.##");
++
++        str += colorTpsValue(avg1) + fmt.format(avg1) + ChatColor.GOLD + ", ";
++        str += colorTpsValue(avg5) + fmt.format(avg5) + ChatColor.GOLD + ", ";
++        str += colorTpsValue(avg15) + fmt.format(avg15);
++
++        sender.sendMessage(str);
++        return true;
++    }
++
++    private ChatColor colorTpsValue(double val) {
++        if (Double.compare(val, 19.0d) >= 0) {
++            // Excellent - Your server is performing well.
++            return ChatColor.GREEN;
++        } else if (Double.compare(val, 17.0d) >= 0) {
++            // Fair - Your server is lagging somewhat
++            return ChatColor.YELLOW;
++        } else {
++            // Unplayable
++            return ChatColor.RED;
++        }
++    }
++}
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 59358fbd..28178ba9 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -63,6 +63,62 @@ public class MinecraftServer implements Runnable, ICommandListener {
+     public static int currentTick;
+     // CraftBukkit end
+ 
++    // Canyon start - improved server tick loop and TPS monitoring
++    // Sourced from Paper
++    public static final int TPS = 20;
++    public static final int TICK_TIME = 1000000000 / TPS;
++    private static final int SAMPLE_INTERVAL = 20;
++
++    private static final long SEC_IN_NANO = 1000000000;
++    private static final long MAX_CATCHUP_BUFFER = TICK_TIME * TPS * 60L;
++    private long lastTick = 0;
++    private long catchupTime = 0;
++    public final RollingAverage tps1 = new RollingAverage(60);
++    public final RollingAverage tps5 = new RollingAverage(60 * 5);
++    public final RollingAverage tps15 = new RollingAverage(60 * 15);
++
++    public static class RollingAverage {
++        private final int size;
++        private long time;
++        private java.math.BigDecimal total;
++        private int index = 0;
++        private final java.math.BigDecimal[] samples;
++        private final long[] times;
++
++        RollingAverage(int size) {
++            this.size = size;
++            this.time = size * SEC_IN_NANO;
++            this.total = dec(TPS).multiply(dec(SEC_IN_NANO)).multiply(dec(size));
++            this.samples = new java.math.BigDecimal[size];
++            this.times = new long[size];
++            for (int i = 0; i < size; i++) {
++                this.samples[i] = dec(TPS);
++                this.times[i] = SEC_IN_NANO;
++            }
++        }
++
++        private static java.math.BigDecimal dec(long t) {
++            return new java.math.BigDecimal(t);
++        }
++        public void add(java.math.BigDecimal x, long t) {
++            time -= times[index];
++            total = total.subtract(samples[index].multiply(dec(times[index])));
++            samples[index] = x;
++            times[index] = t;
++            time += t;
++            total = total.add(x.multiply(dec(t)));
++            if (++index == size) {
++                index = 0;
++            }
++        }
++
++        public double getAverage() {
++            return total.divide(dec(time), 30, java.math.RoundingMode.HALF_UP).doubleValue();
++        }
++    }
++    private static final java.math.BigDecimal TPS_BASE = new java.math.BigDecimal(1E9).multiply(new java.math.BigDecimal(SAMPLE_INTERVAL));
++    // Canyon end
++
+     public MinecraftServer(OptionSet options) { // CraftBukkit - adds argument OptionSet
+         new ThreadSleepForever(this);
+ 
+@@ -342,8 +398,45 @@ public class MinecraftServer implements Runnable, ICommandListener {
+     public void run() {
+         try {
+             if (this.init()) {
+-                long i = System.currentTimeMillis();
++                // Canyon Start - Improve server tick loop
++                long start = System.nanoTime(), curTime, wait, tickSection = start;
++                lastTick = start - TICK_TIME; // Paper
+ 
++                while (this.isRunning) {
++                    curTime = System.nanoTime();
++                    // Paper start - Further improve server tick loop
++                    wait = TICK_TIME - (curTime - lastTick);
++                    if (wait > 0) {
++                        if (catchupTime < 2E6) {
++                            wait += Math.abs(catchupTime);
++                        } else if (wait < catchupTime) {
++                            catchupTime -= wait;
++                            wait = 0;
++                        } else {
++                            wait -= catchupTime;
++                            catchupTime = 0;
++                        }
++                    }
++                    if (wait > 0) {
++                        Thread.sleep(wait / 1000000);
++                        curTime = System.nanoTime();
++                        wait = TICK_TIME - (curTime - lastTick);
++                    }
++
++                    catchupTime = Math.min(MAX_CATCHUP_BUFFER, catchupTime - wait);
++                    if ( ++MinecraftServer.currentTick % SAMPLE_INTERVAL == 0 )
++                    {
++                        final long diff = curTime - tickSection;
++                        java.math.BigDecimal currentTps = TPS_BASE.divide(new java.math.BigDecimal(diff), 30, java.math.RoundingMode.HALF_UP);
++                        tps1.add(currentTps, diff);
++                        tps5.add(currentTps, diff);
++                        tps15.add(currentTps, diff);
++                        tickSection = curTime;
++                    }
++
++                    lastTick = curTime;
++                    this.h();
++                }/*
+                 for (long j = 0L; this.isRunning; Thread.sleep(1L)) {
+                     long k = System.currentTimeMillis();
+                     long l = k - i;
+@@ -370,7 +463,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
+                             this.h();
+                         }
+                     }
+-                }
++                }*/
++                // Canyon end
+             } else {
+                 while (this.isRunning) {
+                     this.b();
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+index e7e3ccf7..3baeb821 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -1,6 +1,8 @@
+ package org.bukkit.craftbukkit;
+ 
+ import java.io.FileNotFoundException;
++
++import com.canyonmodded.command.TpsCommand;
+ import org.bukkit.generator.ChunkGenerator;
+ import com.avaje.ebean.config.DataSourceConfig;
+ import com.avaje.ebean.config.ServerConfig;
+@@ -97,6 +99,10 @@ public final class CraftServer implements Server {
+ 
+         Bukkit.setServer(this);
+ 
++        // Canyon start - register tps command
++        commandMap.register("canyon", new TpsCommand(console));
++        // Canyon end
++
+         configuration = new Configuration((File) console.options.valueOf("bukkit-settings"));
+         loadConfig();
+         loadPlugins();
+-- 
+2.22.0
+

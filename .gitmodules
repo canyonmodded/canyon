@@ -1,0 +1,9 @@
+[submodule "mc-dev"]
+	path = mc-dev
+	url = https://github.com/Bukkit/mc-dev.git
+[submodule "CraftBukkit"]
+	path = CraftBukkit
+	url = https://hub.spigotmc.org/stash/scm/spigot/craftbukkit.git
+[submodule "Bukkit"]
+	path = Bukkit
+	url = https://github.com/Bukkit/Bukkit.git

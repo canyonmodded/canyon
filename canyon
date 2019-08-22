@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+
+# resolve shell-specifics
+case "$(echo "$SHELL" | sed -E 's|/usr(/local)?||g')" in
+    "/bin/zsh")
+        RCPATH="$HOME/.zshrc"
+        SOURCE="${BASH_SOURCE[0]:-${(%):-%N}}"
+    ;;
+    *)
+        RCPATH="$HOME/.bashrc"
+        if [[ -f "$HOME/.bash_aliases" ]]; then
+            RCPATH="$HOME/.bash_aliases"
+        fi
+        SOURCE="${BASH_SOURCE[0]}"
+    ;;
+esac
+
+# get base dir regardless of execution location
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+    DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+done
+SOURCE=$([[ "$SOURCE" = /* ]] && echo "$SOURCE" || echo "$PWD/${SOURCE#./}")
+basedir=$(dirname "$SOURCE")
+gitcmd="git -c commit.gpgsign=false"
+
+source "$basedir/scripts/functions.sh"
+
+failed=0
+case "$1" in
+    "rb" | "rbp" | "rebuild")
+    (
+        set -e
+        cd "$basedir"
+        scripts/rebuildPatches.sh "$basedir" || exit 1
+    ) || failed=1
+    ;;
+    "p" | "patch")
+    (
+        set -e
+        cd "$basedir"
+        scripts/build.sh "$basedir" || exit 1
+    ) || failed=1
+    ;;
+    "j" | "jar")
+    (
+        set -e
+        cd "$basedir"
+        scripts/build.sh "$basedir" "--jar" || exit 1
+    ) || failed=1
+    ;;
+    "make")
+    (
+        if [[ "$2" = "bacon" ]] ; then
+            set -e
+            cd "$basedir"
+            scripts/build.sh "$basedir" "--jar"
+        fi
+    )
+    ;;
+    "c" | "clean")
+        rm -rf Canyon-API
+        rm -rf Canyon-Server
+        rm -rf work
+        echo "Cleaned build files"
+    ;;
+    *)
+        echo "Canyon build tool command. This provides a variety of commands to build and manage the Canyon build"
+        echo "environment. For all of the functionality of this command to be available, you must first run the"
+        echo "'setup' command. View below for details. For essential building and patching, you do not need to do the setup."
+        echo ""
+        echo " Normal commands:"
+        echo "  * rb, rebuild       | Rebuild patches, can be called from anywhere."
+        echo "  * p, patch          | Apply all patches to the project without building it. Can be run from anywhere."
+        echo "  * j, jar            | Apply all patches and build the project, paperclip.jar will be output. Can be run from anywhere."
+    ;;
+esac
+
+unset RCPATH
+unset SOURCE
+unset basedir
+unset -f color
+unset -f colorend
+unset -f paperstash
+unset -f paperunstash
+if [ "$failed" == "1" ]; then
+	unset failed
+	false
+else
+	unset failed
+	true
+fi
