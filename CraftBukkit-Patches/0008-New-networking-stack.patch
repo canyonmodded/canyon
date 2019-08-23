@@ -1,4 +1,4 @@
-From d6f43ec31168731b45d07f4a6f5fbd667ef625dc Mon Sep 17 00:00:00 2001
+From b7cef826ff7bfbfeae1a473638623a86252de704 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -62,6 +62,16 @@ index d7dffe62..971ac06c 100644
  
          configuration.save();
      }
+diff --git a/src/main/java/com/canyonmodded/network/AsyncCapableNetHandler.java b/src/main/java/com/canyonmodded/network/AsyncCapableNetHandler.java
+new file mode 100644
+index 00000000..d645e7c9
+--- /dev/null
++++ b/src/main/java/com/canyonmodded/network/AsyncCapableNetHandler.java
+@@ -0,0 +1,4 @@
++package com.canyonmodded.network;
++
++public interface AsyncCapableNetHandler {
++}
 diff --git a/src/main/java/com/canyonmodded/network/NettyBootstrap.java b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
 new file mode 100644
 index 00000000..32f8b14a
@@ -222,10 +232,10 @@ index 00000000..34be2e85
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java b/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java
 new file mode 100644
-index 00000000..3fed745f
+index 00000000..8069bdb3
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java
-@@ -0,0 +1,54 @@
+@@ -0,0 +1,58 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.channel.ChannelHandlerContext;
@@ -258,7 +268,11 @@ index 00000000..3fed745f
 +    protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
 +        // Most, if not all, Minecraft packets must be processed on the main thread.
 +        NetHandler nh = networkManager.p;
-+        server.queueTask(() -> packet.a(nh));
++        if (nh instanceof AsyncCapableNetHandler) {
++            packet.a(nh);
++        } else {
++            server.queueTask(() -> packet.a(nh));
++        }
 +    }
 +
 +    @Override
@@ -486,10 +500,10 @@ index 9ab16a1b..e9072029 100644
  
          // CraftBukkit start
 diff --git a/src/main/java/net/minecraft/server/NetLoginHandler.java b/src/main/java/net/minecraft/server/NetLoginHandler.java
-index 99e775b8..5d48b47d 100644
+index 99e775b8..abe11b5e 100644
 --- a/src/main/java/net/minecraft/server/NetLoginHandler.java
 +++ b/src/main/java/net/minecraft/server/NetLoginHandler.java
-@@ -1,5 +1,7 @@
+@@ -1,10 +1,12 @@
  package net.minecraft.server;
  
 +import com.canyonmodded.network.NettyNetworkManager;
@@ -497,6 +511,12 @@ index 99e775b8..5d48b47d 100644
  import java.net.Socket;
  import java.util.Random;
  import java.util.logging.Logger;
+ 
+-public class NetLoginHandler extends NetHandler {
++public class NetLoginHandler extends NetHandler implements com.canyonmodded.network.AsyncCapableNetHandler { // Canyon
+ 
+     public static Logger a = Logger.getLogger("Minecraft");
+     private static Random d = new Random();
 @@ -22,6 +24,14 @@ public class NetLoginHandler extends NetHandler {
          this.networkManager.f = 0;
      }
@@ -512,6 +532,15 @@ index 99e775b8..5d48b47d 100644
      // CraftBukkit start
      public Socket getSocket() {
          return this.networkManager.socket;
+@@ -71,7 +81,7 @@ public class NetLoginHandler extends NetHandler {
+             }
+         } else {
+             if (!this.server.onlineMode) {
+-                this.b(packet1login);
++                server.queueTask(() -> this.b(packet1login)); // Canyon - post to main thread
+             } else {
+                 (new ThreadLoginVerifier(this, packet1login, this.server.server)).start(); // CraftBukkit
+             }
 @@ -96,7 +106,7 @@ public class NetLoginHandler extends NetHandler {
              // this.server.serverConfigurationManager.sendAll(new Packet3Chat("\u00A7e" + entityplayer.name + " joined the game."));  // CraftBukkit - message moved to join event
              this.server.serverConfigurationManager.c(entityplayer);
