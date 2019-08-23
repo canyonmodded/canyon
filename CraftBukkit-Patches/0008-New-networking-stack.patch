@@ -1,4 +1,4 @@
-From c2f890a6439c861ef7402cc8e4cef92fc7919b01 Mon Sep 17 00:00:00 2001
+From d6f43ec31168731b45d07f4a6f5fbd667ef625dc Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -10,10 +10,10 @@ This implementation is simple and still has much room for improvement,
 however it should feel snappier than the old networking stack.
 
 diff --git a/pom.xml b/pom.xml
-index 31d534fb..9af2267f 100644
+index 31d534fb..a1d15ede 100644
 --- a/pom.xml
 +++ b/pom.xml
-@@ -92,6 +92,13 @@
+@@ -92,6 +92,29 @@
        <type>jar</type>
        <scope>provided</scope>
      </dependency>
@@ -23,6 +23,22 @@ index 31d534fb..9af2267f 100644
 +      <version>4.1.38.Final</version>
 +      <type>jar</type>
 +      <scope>compile</scope>
++    </dependency>
++    <dependency>
++      <groupId>io.netty</groupId>
++      <artifactId>netty-transport-native-epoll</artifactId>
++      <version>4.1.38.Final</version>
++      <type>jar</type>
++      <scope>compile</scope>
++      <classifier>linux-x86_64</classifier>
++    </dependency>
++    <dependency>
++      <groupId>io.netty</groupId>
++      <artifactId>netty-transport-native-kqueue</artifactId>
++      <version>4.1.38.Final</version>
++      <type>jar</type>
++      <scope>compile</scope>
++      <classifier>osx-x86_64</classifier>
 +    </dependency>
    </dependencies>
    <!-- This builds a completely 'ready to start' jar with all dependencies inside -->
@@ -48,16 +64,24 @@ index d7dffe62..971ac06c 100644
      }
 diff --git a/src/main/java/com/canyonmodded/network/NettyBootstrap.java b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
 new file mode 100644
-index 00000000..4e20a61a
+index 00000000..32f8b14a
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,99 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.bootstrap.ServerBootstrap;
 +import io.netty.channel.*;
++import io.netty.channel.epoll.Epoll;
++import io.netty.channel.epoll.EpollEventLoopGroup;
++import io.netty.channel.epoll.EpollServerSocketChannel;
++import io.netty.channel.kqueue.KQueue;
++import io.netty.channel.kqueue.KQueueEventLoopGroup;
++import io.netty.channel.kqueue.KQueueServerSocketChannel;
 +import io.netty.channel.nio.NioEventLoopGroup;
++import io.netty.channel.socket.ServerSocketChannel;
 +import io.netty.channel.socket.nio.NioServerSocketChannel;
++import io.netty.handler.timeout.ReadTimeoutHandler;
 +import net.minecraft.server.MinecraftServer;
 +import net.minecraft.server.NetLoginHandler;
 +
@@ -73,34 +97,64 @@ index 00000000..4e20a61a
 +
 +    public NettyBootstrap(InetAddress bind, int port, MinecraftServer server) {
 +        this.server = server;
-+        this.boss = new NioEventLoopGroup();
-+        this.worker = new NioEventLoopGroup();
++        this.boss = createEventLoopGroup("boss");
++        this.worker = createEventLoopGroup("worker");
 +        this.bind = bind;
 +        this.port = port;
 +    }
 +
++    private EventLoopGroup createEventLoopGroup(String type) {
++        if (KQueue.isAvailable()) {
++            return new KQueueEventLoopGroup();
++        } else if (Epoll.isAvailable()) {
++            return new EpollEventLoopGroup();
++        } else {
++            return new NioEventLoopGroup();
++        }
++    }
++
++    private Class<? extends ServerSocketChannel> socketChannelType() {
++        if (KQueue.isAvailable()) {
++            return KQueueServerSocketChannel.class;
++        } else if (Epoll.isAvailable()) {
++            return EpollServerSocketChannel.class;
++        } else {
++            return NioServerSocketChannel.class;
++        }
++    }
++
++    private void logChannelType() {
++        if (KQueue.isAvailable()) {
++            MinecraftServer.log.info("Using kqueue channel type");
++        } else if (Epoll.isAvailable()) {
++            MinecraftServer.log.info("Using epoll channels type");
++        } else {
++            MinecraftServer.log.info("Using NIO channel type");
++        }
++    }
++
 +    public void bind() {
++        logChannelType();
++
 +        new ServerBootstrap()
 +                .group(boss, worker)
-+                .channel(NioServerSocketChannel.class)
++                .channel(socketChannelType())
 +                .childHandler(new ChannelInitializer<Channel>() {
 +                    @Override
 +                    protected void initChannel(Channel channel) throws Exception {
 +                        NetLoginHandler handler = new NetLoginHandler(server, channel);
 +                        channel.pipeline()
-+                                .addLast(new PacketDecoder())
-+                                .addLast(new PacketEncoder())
-+                                .addLast(new NetworkManagerHandler(server, (NettyNetworkManager) handler.networkManager));
++                                .addLast("read-timeout", new ReadTimeoutHandler(30))
++                                .addLast("packet-decoder", new PacketDecoder())
++                                .addLast("packet-encoder", new PacketEncoder())
++                                .addLast("packet-handler", new NetworkManagerHandler(server, (NettyNetworkManager) handler.networkManager));
 +                    }
 +                })
 +                .bind(bind, port)
-+                .awaitUninterruptibly()
-+                .addListener(new ChannelFutureListener() {
-+                    @Override
-+                    public void operationComplete(ChannelFuture future) throws Exception {
-+                        if (future.isSuccess()) {
-+                            bound = future.channel();
-+                        }
++                .syncUninterruptibly()
++                .addListener((ChannelFutureListener) future -> {
++                    if (future.isSuccess()) {
++                        bound = future.channel();
 +                    }
 +                });
 +    }
@@ -115,10 +169,10 @@ index 00000000..4e20a61a
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NettyNetworkManager.java b/src/main/java/com/canyonmodded/network/NettyNetworkManager.java
 new file mode 100644
-index 00000000..bfaabc36
+index 00000000..34be2e85
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NettyNetworkManager.java
-@@ -0,0 +1,41 @@
+@@ -0,0 +1,47 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.channel.Channel;
@@ -145,6 +199,12 @@ index 00000000..bfaabc36
 +    }
 +
 +    @Override
++    public void a(String s, Object... aobject) {
++        super.a(s, aobject);
++        this.channel.close();
++    }
++
++    @Override
 +    public void d() {
 +        // Actually disconnects the player
 +        this.channel.close();
@@ -162,14 +222,15 @@ index 00000000..bfaabc36
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java b/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java
 new file mode 100644
-index 00000000..8516d099
+index 00000000..3fed745f
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java
-@@ -0,0 +1,49 @@
+@@ -0,0 +1,54 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.channel.ChannelHandlerContext;
 +import io.netty.channel.SimpleChannelInboundHandler;
++import io.netty.handler.timeout.ReadTimeoutException;
 +import net.minecraft.server.*;
 +
 +import java.util.concurrent.ScheduledFuture;
@@ -212,7 +273,11 @@ index 00000000..8516d099
 +
 +    @Override
 +    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-+        networkManager.a(cause);
++        if (cause instanceof ReadTimeoutException) {
++            networkManager.a("disconnect.timeout");
++        } else {
++            networkManager.a(cause);
++        }
 +    }
 +}
 diff --git a/src/main/java/com/canyonmodded/network/PacketDecoder.java b/src/main/java/com/canyonmodded/network/PacketDecoder.java
@@ -251,10 +316,10 @@ index 00000000..226a3bb5
 +}
 diff --git a/src/main/java/com/canyonmodded/network/PacketEncoder.java b/src/main/java/com/canyonmodded/network/PacketEncoder.java
 new file mode 100644
-index 00000000..e8092681
+index 00000000..724e3b69
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/PacketEncoder.java
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,33 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.buffer.ByteBuf;
@@ -269,19 +334,21 @@ index 00000000..e8092681
 +import java.util.zip.DeflaterOutputStream;
 +
 +public class PacketEncoder extends MessageToByteEncoder<Packet> {
++    private final ByteArrayOutputStream chunkCompressionBuffer = new ByteArrayOutputStream(8192);
++
 +    @Override
 +    protected void encode(ChannelHandlerContext ctx, Packet packet, ByteBuf buf) throws Exception {
 +        DataOutputStream out = new DataOutputStream(new ByteBufOutputStream(buf));
 +        if (packet instanceof Packet51MapChunk && ((Packet51MapChunk) packet).g == null) {
 +            // CraftBukkit moves map chunk compression out of the main thread (good) but effectively makes it single
 +            // threaded (bad). Compress the packets here instead, where we can take advantage of multiple cores.
-+            ByteArrayOutputStream os = new ByteArrayOutputStream(((Packet51MapChunk) packet).rawData.length);
-+            try (DeflaterOutputStream dos = new DeflaterOutputStream(os)) {
++            try (DeflaterOutputStream dos = new DeflaterOutputStream(chunkCompressionBuffer)) {
 +                dos.write(((Packet51MapChunk) packet).rawData);
 +            }
-+            ((Packet51MapChunk) packet).g = os.toByteArray();
-+            ((Packet51MapChunk) packet).h = os.size();
++            ((Packet51MapChunk) packet).g = chunkCompressionBuffer.toByteArray();
++            ((Packet51MapChunk) packet).h = chunkCompressionBuffer.size();
 +            packet.k = true;
++            chunkCompressionBuffer.reset();
 +        }
 +        Packet.a(packet, out);
 +    }
