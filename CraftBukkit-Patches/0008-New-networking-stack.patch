@@ -1,0 +1,557 @@
+From b6104857b89bf7e88c6b5372d255134e916a9fa9 Mon Sep 17 00:00:00 2001
+From: Andrew Steinborn <git@steinborn.me>
+Date: Thu, 22 Aug 2019 23:12:21 -0400
+Subject: [PATCH] New networking stack
+
+This is a simple graft of Netty (the networking library used in modern
+versions of Minecraft) onto Minecraft Beta 1.7.3.
+
+This implementation is simple and still has much room for improvement,
+however it should feel snappier than the old networking stack.
+
+diff --git a/pom.xml b/pom.xml
+index 31d534fb..55330c52 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -92,6 +92,13 @@
+       <type>jar</type>
+       <scope>provided</scope>
+     </dependency>
++    <dependency>
++      <groupId>io.netty</groupId>
++      <artifactId>netty-all</artifactId>
++      <version>4.1.38.Final</version>
++      <type>jar</type>
++      <scope>compile</scope>
++    </dependency>
+   </dependencies>
+   <!-- This builds a completely 'ready to start' jar with all dependencies inside -->
+   <build>
+diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
+index d7dffe62..971ac06c 100644
+--- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
++++ b/src/main/java/com/canyonmodded/config/CanyonConfig.java
+@@ -6,12 +6,14 @@ import java.io.File;
+ 
+ public class CanyonConfig {
+     // Add settings here. Make sure they're public visibility!
++    public static boolean useNewNetworkingStack = false;
+ 
+     public static void loadConfiguration(File file) {
+         Configuration configuration = new Configuration(file);
+         configuration.load();
+ 
+         // Load settings here.
++        useNewNetworkingStack = configuration.getBoolean("settings.use-new-networking-stack", false);
+ 
+         configuration.save();
+     }
+diff --git a/src/main/java/com/canyonmodded/network/NettyBootstrap.java b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
+new file mode 100644
+index 00000000..4e20a61a
+--- /dev/null
++++ b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
+@@ -0,0 +1,61 @@
++package com.canyonmodded.network;
++
++import io.netty.bootstrap.ServerBootstrap;
++import io.netty.channel.*;
++import io.netty.channel.nio.NioEventLoopGroup;
++import io.netty.channel.socket.nio.NioServerSocketChannel;
++import net.minecraft.server.MinecraftServer;
++import net.minecraft.server.NetLoginHandler;
++
++import java.net.InetAddress;
++
++public class NettyBootstrap {
++    private Channel bound;
++    private final EventLoopGroup boss;
++    private final EventLoopGroup worker;
++    private final InetAddress bind;
++    private final int port;
++    private final MinecraftServer server;
++
++    public NettyBootstrap(InetAddress bind, int port, MinecraftServer server) {
++        this.server = server;
++        this.boss = new NioEventLoopGroup();
++        this.worker = new NioEventLoopGroup();
++        this.bind = bind;
++        this.port = port;
++    }
++
++    public void bind() {
++        new ServerBootstrap()
++                .group(boss, worker)
++                .channel(NioServerSocketChannel.class)
++                .childHandler(new ChannelInitializer<Channel>() {
++                    @Override
++                    protected void initChannel(Channel channel) throws Exception {
++                        NetLoginHandler handler = new NetLoginHandler(server, channel);
++                        channel.pipeline()
++                                .addLast(new PacketDecoder())
++                                .addLast(new PacketEncoder())
++                                .addLast(new NetworkManagerHandler(server, (NettyNetworkManager) handler.networkManager));
++                    }
++                })
++                .bind(bind, port)
++                .awaitUninterruptibly()
++                .addListener(new ChannelFutureListener() {
++                    @Override
++                    public void operationComplete(ChannelFuture future) throws Exception {
++                        if (future.isSuccess()) {
++                            bound = future.channel();
++                        }
++                    }
++                });
++    }
++
++    public void close() {
++        if (this.bound != null) {
++            this.bound.close().syncUninterruptibly();
++        }
++        this.worker.shutdownGracefully();
++        this.boss.shutdownGracefully();
++    }
++}
+diff --git a/src/main/java/com/canyonmodded/network/NettyNetworkManager.java b/src/main/java/com/canyonmodded/network/NettyNetworkManager.java
+new file mode 100644
+index 00000000..bfaabc36
+--- /dev/null
++++ b/src/main/java/com/canyonmodded/network/NettyNetworkManager.java
+@@ -0,0 +1,41 @@
++package com.canyonmodded.network;
++
++import io.netty.channel.Channel;
++import net.minecraft.server.NetHandler;
++import net.minecraft.server.NetworkManager;
++import net.minecraft.server.Packet;
++
++public class NettyNetworkManager extends NetworkManager {
++    private final Channel channel;
++
++    public NettyNetworkManager(Channel channel, NetHandler nethandler) {
++        super(channel, nethandler);
++        this.channel = channel;
++    }
++
++    public Channel getChannel() {
++        return channel;
++    }
++
++    @Override
++    public void a() {
++        // This method interrupts the read-write threads for shutdown, but Netty stops reading when a channel is closed
++        // "for free".
++    }
++
++    @Override
++    public void d() {
++        // Actually disconnects the player
++        this.channel.close();
++    }
++
++    @Override
++    public void queue(Packet packet) {
++        this.channel.writeAndFlush(packet, this.channel.voidPromise());
++    }
++
++    @Override
++    public void b() {
++        // No-op: only used in old networking stack for housekeeping tasks
++    }
++}
+diff --git a/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java b/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java
+new file mode 100644
+index 00000000..8516d099
+--- /dev/null
++++ b/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java
+@@ -0,0 +1,49 @@
++package com.canyonmodded.network;
++
++import io.netty.channel.ChannelHandlerContext;
++import io.netty.channel.SimpleChannelInboundHandler;
++import net.minecraft.server.*;
++
++import java.util.concurrent.ScheduledFuture;
++import java.util.concurrent.TimeUnit;
++
++public class NetworkManagerHandler extends SimpleChannelInboundHandler<Packet> {
++    private final MinecraftServer server;
++    private final NettyNetworkManager networkManager;
++    private final ScheduledFuture<?> tickHandler;
++
++    public NetworkManagerHandler(MinecraftServer server, NettyNetworkManager networkManager) {
++        this.server = server;
++        this.networkManager = networkManager;
++        this.tickHandler = networkManager.getChannel().eventLoop().scheduleAtFixedRate(() -> {
++            NetHandler h = networkManager.p;
++            if (h instanceof NetLoginHandler) {
++                ((NetLoginHandler) h).a();
++            } else if (h instanceof NetServerHandler) {
++                ((NetServerHandler) h).a();
++            }
++        }, 0, 50, TimeUnit.MILLISECONDS);
++    }
++
++    @Override
++    protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
++        // Most, if not all, Minecraft packets must be processed on the main thread.
++        NetHandler nh = networkManager.p;
++        server.queueTask(() -> packet.a(nh));
++    }
++
++    @Override
++    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
++        networkManager.a("disconnect.closed");
++    }
++
++    @Override
++    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
++        this.tickHandler.cancel(false);
++    }
++
++    @Override
++    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
++        networkManager.a(cause);
++    }
++}
+diff --git a/src/main/java/com/canyonmodded/network/PacketDecoder.java b/src/main/java/com/canyonmodded/network/PacketDecoder.java
+new file mode 100644
+index 00000000..226a3bb5
+--- /dev/null
++++ b/src/main/java/com/canyonmodded/network/PacketDecoder.java
+@@ -0,0 +1,28 @@
++package com.canyonmodded.network;
++
++import io.netty.buffer.ByteBuf;
++import io.netty.buffer.ByteBufInputStream;
++import io.netty.channel.ChannelHandlerContext;
++import io.netty.handler.codec.ByteToMessageDecoder;
++import net.minecraft.server.Packet;
++
++import java.io.DataInputStream;
++import java.io.EOFException;
++import java.util.List;
++
++public class PacketDecoder extends ByteToMessageDecoder {
++    @Override
++    protected void decode(ChannelHandlerContext ctx, ByteBuf buf, List<Object> list) throws Exception {
++        // Minecraft Beta packets do not have a length - rather, the server "knows" the length of each packet it's going
++        // to read.
++        int ri = buf.readerIndex();
++        DataInputStream stream = new DataInputStream(new ByteBufInputStream(buf));
++        try {
++            Packet packet = Packet.a(stream, true, true);
++            list.add(packet);
++        } catch (EOFException e) {
++            // We have to hold back for now and queue more data
++            buf.readerIndex(ri);
++        }
++    }
++}
+diff --git a/src/main/java/com/canyonmodded/network/PacketEncoder.java b/src/main/java/com/canyonmodded/network/PacketEncoder.java
+new file mode 100644
+index 00000000..e8092681
+--- /dev/null
++++ b/src/main/java/com/canyonmodded/network/PacketEncoder.java
+@@ -0,0 +1,31 @@
++package com.canyonmodded.network;
++
++import io.netty.buffer.ByteBuf;
++import io.netty.buffer.ByteBufOutputStream;
++import io.netty.channel.ChannelHandlerContext;
++import io.netty.handler.codec.MessageToByteEncoder;
++import net.minecraft.server.Packet;
++import net.minecraft.server.Packet51MapChunk;
++
++import java.io.ByteArrayOutputStream;
++import java.io.DataOutputStream;
++import java.util.zip.DeflaterOutputStream;
++
++public class PacketEncoder extends MessageToByteEncoder<Packet> {
++    @Override
++    protected void encode(ChannelHandlerContext ctx, Packet packet, ByteBuf buf) throws Exception {
++        DataOutputStream out = new DataOutputStream(new ByteBufOutputStream(buf));
++        if (packet instanceof Packet51MapChunk && ((Packet51MapChunk) packet).g == null) {
++            // CraftBukkit moves map chunk compression out of the main thread (good) but effectively makes it single
++            // threaded (bad). Compress the packets here instead, where we can take advantage of multiple cores.
++            ByteArrayOutputStream os = new ByteArrayOutputStream(((Packet51MapChunk) packet).rawData.length);
++            try (DeflaterOutputStream dos = new DeflaterOutputStream(os)) {
++                dos.write(((Packet51MapChunk) packet).rawData);
++            }
++            ((Packet51MapChunk) packet).g = os.toByteArray();
++            ((Packet51MapChunk) packet).h = os.size();
++            packet.k = true;
++        }
++        Packet.a(packet, out);
++    }
++}
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 9ab16a1b..e9072029 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -4,18 +4,16 @@ import java.awt.GraphicsEnvironment;
+ import java.io.File;
+ import java.io.IOException;
+ import java.net.InetAddress;
+-import java.util.ArrayList;
+-import java.util.Collections;
+-import java.util.HashMap;
+-import java.util.Iterator;
+-import java.util.List;
+-import java.util.Random;
++import java.util.*;
++import java.util.concurrent.ConcurrentLinkedDeque;
+ import java.util.logging.Level;
+ import java.util.logging.Logger;
+ 
+ // CraftBukkit start
+ import java.io.PrintStream;
+ import java.net.UnknownHostException;
++
++import com.canyonmodded.network.NettyBootstrap;
+ import jline.ConsoleReader;
+ import joptsimple.OptionSet;
+ import org.bukkit.World.Environment;
+@@ -37,6 +35,7 @@ public class MinecraftServer implements Runnable, ICommandListener {
+     public static Logger log = Logger.getLogger("Minecraft");
+     public static HashMap trackerList = new HashMap();
+     public NetworkListenThread networkListenThread;
++    private NettyBootstrap nettyBootstrap; // Canyon
+     public PropertyManager propertyManager;
+     // public WorldServer[] worldServer; // CraftBukkit - removed!
+     public ServerConfigurationManager serverConfigurationManager;
+@@ -119,6 +118,10 @@ public class MinecraftServer implements Runnable, ICommandListener {
+     private static final java.math.BigDecimal TPS_BASE = new java.math.BigDecimal(1E9).multiply(new java.math.BigDecimal(SAMPLE_INTERVAL));
+     // Canyon end
+ 
++    // Canyon start - task queue for main thread, to support Netty
++    private final Queue<Runnable> queuedMainTasks = new ConcurrentLinkedDeque<>();
++    // Canyon end
++
+     public MinecraftServer(OptionSet options) { // CraftBukkit - adds argument OptionSet
+         new ThreadSleepForever(this);
+ 
+@@ -168,7 +171,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
+ 
+         int i = this.propertyManager.getInt("server-port", 25565);
+ 
+-        log.info("Starting Minecraft server on " + (s.length() == 0 ? "*" : s) + ":" + i);
++        // Canyon start - moved below
++/*        log.info("Starting Minecraft server on " + (s.length() == 0 ? "*" : s) + ":" + i);
+ 
+         try {
+             this.networkListenThread = new NetworkListenThread(this, inetaddress, i);
+@@ -177,7 +181,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
+             log.log(Level.WARNING, "The exception was: " + ioexception.toString());
+             log.warning("Perhaps a server is already running on that port?");
+             return false;
+-        }
++        }*/
++        // Canyon end
+ 
+         // Canyon start - the login endpoint used doesn't work any more, so why bother?
+         /*
+@@ -191,6 +196,24 @@ public class MinecraftServer implements Runnable, ICommandListener {
+         // Canyon end
+ 
+         this.serverConfigurationManager = new ServerConfigurationManager(this);
++        // Canyon start - moved binding here so we have access to CanyonConfig
++        log.info("Starting Minecraft server on " + (s.length() == 0 ? "*" : s) + ":" + i);
++
++        try {
++            if (com.canyonmodded.config.CanyonConfig.useNewNetworkingStack) {
++                this.nettyBootstrap = new com.canyonmodded.network.NettyBootstrap(inetaddress, i, this);
++                this.nettyBootstrap.bind();
++            } else {
++                this.networkListenThread = new NetworkListenThread(this, inetaddress, i);
++            }
++        } catch (Throwable ioexception) { // CraftBukkit - IOException -> Throwable
++            log.warning("**** FAILED TO BIND TO PORT!");
++            log.log(Level.WARNING, "The exception was: " + ioexception.toString());
++            log.warning("Perhaps a server is already running on that port?");
++            if (this.nettyBootstrap != null) this.nettyBootstrap.close();
++            return false;
++        }
++        // Canyon end
+         // CraftBukkit - removed trackers
+         long j = System.nanoTime();
+         String s1 = this.propertyManager.getString("level-name", "world");
+@@ -505,6 +528,12 @@ public class MinecraftServer implements Runnable, ICommandListener {
+         }
+     }
+ 
++    // Canyon start
++    public void queueTask(Runnable runnable) {
++        this.queuedMainTasks.add(runnable);
++    }
++    // Canyon end
++
+     private void h() {
+         ArrayList arraylist = new ArrayList();
+         Iterator iterator = trackerList.keySet().iterator();
+@@ -530,6 +559,18 @@ public class MinecraftServer implements Runnable, ICommandListener {
+         Vec3D.a();
+         ++this.ticks;
+ 
++        // Canyon start - queued main thread tasks
++        int toRun = this.queuedMainTasks.size();
++        Runnable task;
++        while (toRun-- >= 0 && (task = this.queuedMainTasks.poll()) != null) {
++            try {
++                task.run();
++            } catch (Exception e) {
++                log.log(Level.SEVERE, "Exception processing server task", e);
++            }
++        }
++        // Canyon end
++
+         ((CraftScheduler) this.server.getScheduler()).mainThreadHeartbeat(this.ticks); // CraftBukkit
+ 
+         for (j = 0; j < this.worlds.size(); ++j) { // CraftBukkit
+@@ -555,7 +596,7 @@ public class MinecraftServer implements Runnable, ICommandListener {
+             }
+         // } // CraftBukkit
+ 
+-        this.networkListenThread.a();
++        if (this.networkListenThread != null) this.networkListenThread.a(); // Canyon
+         this.serverConfigurationManager.b();
+ 
+         // CraftBukkit start
+diff --git a/src/main/java/net/minecraft/server/NetLoginHandler.java b/src/main/java/net/minecraft/server/NetLoginHandler.java
+index 99e775b8..5d48b47d 100644
+--- a/src/main/java/net/minecraft/server/NetLoginHandler.java
++++ b/src/main/java/net/minecraft/server/NetLoginHandler.java
+@@ -1,5 +1,7 @@
+ package net.minecraft.server;
+ 
++import com.canyonmodded.network.NettyNetworkManager;
++
+ import java.net.Socket;
+ import java.util.Random;
+ import java.util.logging.Logger;
+@@ -22,6 +24,14 @@ public class NetLoginHandler extends NetHandler {
+         this.networkManager.f = 0;
+     }
+ 
++    // Canyon start - alternative networking stack
++    public NetLoginHandler(MinecraftServer minecraftserver, io.netty.channel.Channel ch) {
++        this.server = minecraftserver;
++        this.networkManager = new NettyNetworkManager(ch, this);
++        this.networkManager.f = 0;
++    }
++    // Canyon end
++
+     // CraftBukkit start
+     public Socket getSocket() {
+         return this.networkManager.socket;
+@@ -96,7 +106,7 @@ public class NetLoginHandler extends NetHandler {
+             // this.server.serverConfigurationManager.sendAll(new Packet3Chat("\u00A7e" + entityplayer.name + " joined the game."));  // CraftBukkit - message moved to join event
+             this.server.serverConfigurationManager.c(entityplayer);
+             netserverhandler.a(entityplayer.locX, entityplayer.locY, entityplayer.locZ, entityplayer.yaw, entityplayer.pitch);
+-            this.server.networkListenThread.a(netserverhandler);
++            if (this.server.networkListenThread != null) this.server.networkListenThread.a(netserverhandler); // Canyon
+             netserverhandler.sendPacket(new Packet4UpdateTime(entityplayer.getPlayerTime())); // CraftBukkit - add support for player specific time
+             entityplayer.syncInventory();
+         }
+@@ -110,6 +120,7 @@ public class NetLoginHandler extends NetHandler {
+     }
+ 
+     public void a(Packet packet) {
++        MinecraftServer.log.severe("Didn't expect packet " + packet + "!");
+         this.disconnect("Protocol error");
+     }
+ 
+diff --git a/src/main/java/net/minecraft/server/NetServerHandler.java b/src/main/java/net/minecraft/server/NetServerHandler.java
+index a8241311..68dcfca1 100644
+--- a/src/main/java/net/minecraft/server/NetServerHandler.java
++++ b/src/main/java/net/minecraft/server/NetServerHandler.java
+@@ -649,7 +649,7 @@ public class NetServerHandler extends NetHandler implements ICommandListener {
+                 this.networkManager.queue(new Packet3Chat(line));
+             }
+             packet = null;
+-        } else if (packet.k == true) {
++        } else if (packet.k && !(this.networkManager instanceof com.canyonmodded.network.NettyNetworkManager)) { // Canyon
+             // Reroute all low-priority packets through to compression thread.
+             ChunkCompressionThread.sendPacket(this.player, packet);
+             packet = null;
+diff --git a/src/main/java/net/minecraft/server/NetworkManager.java b/src/main/java/net/minecraft/server/NetworkManager.java
+index 11cf7db8..4aa2dcc0 100644
+--- a/src/main/java/net/minecraft/server/NetworkManager.java
++++ b/src/main/java/net/minecraft/server/NetworkManager.java
+@@ -24,7 +24,7 @@ public class NetworkManager {
+     private List m = Collections.synchronizedList(new ArrayList());
+     private List highPriorityQueue = Collections.synchronizedList(new ArrayList());
+     private List lowPriorityQueue = Collections.synchronizedList(new ArrayList());
+-    private NetHandler p;
++    public NetHandler p; // Canyon - private -> public
+     private boolean q = false;
+     private Thread r;
+     private Thread s;
+@@ -38,6 +38,13 @@ public class NetworkManager {
+     public int f = 0;
+     private int lowPriorityQueueDelay = 50;
+ 
++    // Canyon start - alternative constructor
++    public NetworkManager(io.netty.channel.Channel ch, NetHandler nethandler) {
++        this.i = ch.remoteAddress();
++        this.p = nethandler;
++    }
++    // Canyon end
++
+     public NetworkManager(Socket socket, String s, NetHandler nethandler) {
+         this.socket = socket;
+         this.i = socket.getRemoteSocketAddress();
+@@ -169,7 +176,7 @@ public class NetworkManager {
+         }
+     }
+ 
+-    private void a(Exception exception) {
++    public void a(Throwable exception) { // Canyon - private -> public, Exception -> Throwable
+         exception.printStackTrace();
+         this.a("disconnect.genericReason", new Object[] { "Internal exception: " + exception.toString()});
+     }
+@@ -179,6 +186,12 @@ public class NetworkManager {
+             this.t = true;
+             this.u = s;
+             this.v = aobject;
++            // Canyon start - new networking stack
++            if (this.socket == null) {
++                this.p.a(s, aobject);
++                return;
++            }
++            // Canyon end
+             (new NetworkMasterThread(this)).start();
+             this.l = false;
+ 
+diff --git a/src/main/java/net/minecraft/server/Packet.java b/src/main/java/net/minecraft/server/Packet.java
+index f83acc41..525c00ff 100644
+--- a/src/main/java/net/minecraft/server/Packet.java
++++ b/src/main/java/net/minecraft/server/Packet.java
+@@ -56,8 +56,14 @@ public abstract class Packet {
+         return ((Integer) b.get(this.getClass())).intValue();
+     }
+ 
+-    // CraftBukkit - throws IOException
++    // Canyon start - retain compatibility with old network stack
+     public static Packet a(DataInputStream datainputstream, boolean flag) throws IOException {
++        return a(datainputstream, flag, false);
++    }
++    // Canyon end
++
++    // CraftBukkit - throws IOException
++    public static Packet a(DataInputStream datainputstream, boolean flag, boolean netty) throws IOException { // Canyon
+         boolean flag1 = false;
+         Packet packet = null;
+ 
+@@ -80,6 +86,7 @@ public abstract class Packet {
+ 
+             packet.a(datainputstream);
+         } catch (EOFException eofexception) {
++            if (netty) throw eofexception; // Canyon - special netty flag
+             System.out.println("Reached end of stream");
+             return null;
+         }
+-- 
+2.22.0
+
