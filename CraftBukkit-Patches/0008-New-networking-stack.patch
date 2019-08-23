@@ -1,4 +1,4 @@
-From b6104857b89bf7e88c6b5372d255134e916a9fa9 Mon Sep 17 00:00:00 2001
+From c2f890a6439c861ef7402cc8e4cef92fc7919b01 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -10,7 +10,7 @@ This implementation is simple and still has much room for improvement,
 however it should feel snappier than the old networking stack.
 
 diff --git a/pom.xml b/pom.xml
-index 31d534fb..55330c52 100644
+index 31d534fb..9af2267f 100644
 --- a/pom.xml
 +++ b/pom.xml
 @@ -92,6 +92,13 @@
@@ -19,7 +19,7 @@ index 31d534fb..55330c52 100644
      </dependency>
 +    <dependency>
 +      <groupId>io.netty</groupId>
-+      <artifactId>netty-all</artifactId>
++      <artifactId>netty-handler</artifactId>
 +      <version>4.1.38.Final</version>
 +      <type>jar</type>
 +      <scope>compile</scope>
