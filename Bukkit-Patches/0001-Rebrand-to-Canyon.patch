@@ -1,0 +1,23 @@
+From 7f00cc8ef88a589a0181d063b19ffe859bd885f7 Mon Sep 17 00:00:00 2001
+From: Andrew Steinborn <git@steinborn.me>
+Date: Fri, 23 Aug 2019 23:38:14 -0400
+Subject: [PATCH] Rebrand to Canyon
+
+
+diff --git a/pom.xml b/pom.xml
+index 7e841f0b..c77ceb1d 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -1,7 +1,7 @@
+ <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+     <modelVersion>4.0.0</modelVersion>
+-    <groupId>org.bukkit</groupId>
+-    <artifactId>bukkit</artifactId>
++    <groupId>com.canyonmodded</groupId>
++    <artifactId>canyon-api</artifactId>
+     <version>0.0.1-SNAPSHOT</version>
+     <name>Bukkit</name>
+     <properties>
+-- 
+2.22.0
+
