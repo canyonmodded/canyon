@@ -1,0 +1,55 @@
+From 2e0ee5d6c188f0b842a6c9a98751dfddc7e685bc Mon Sep 17 00:00:00 2001
+From: Andrew Steinborn <git@steinborn.me>
+Date: Sun, 29 Sep 2019 18:54:13 -0400
+Subject: [PATCH] Optimize hash codes for some classes used as keys
+
+
+diff --git a/src/main/java/net/minecraft/server/ChunkCoordIntPair.java b/src/main/java/net/minecraft/server/ChunkCoordIntPair.java
+index f3a2e80d..c8f15d81 100644
+--- a/src/main/java/net/minecraft/server/ChunkCoordIntPair.java
++++ b/src/main/java/net/minecraft/server/ChunkCoordIntPair.java
+@@ -11,7 +11,12 @@ public class ChunkCoordIntPair {
+     }
+ 
+     public static int a(int i, int j) {
+-        return (i < 0 ? Integer.MIN_VALUE : 0) | (i & 32767) << 16 | (j < 0 ? '\u8000' : 0) | j & 32767;
++        // Canyon start - improve hash code
++        //return (i < 0 ? Integer.MIN_VALUE : 0) | (i & 32767) << 16 | (j < 0 ? '\u8000' : 0) | j & 32767;
++        int result = Integer.hashCode(i);
++        result = 31 * result + Integer.hashCode(j);
++        return result;
++        // Canyon end
+     }
+ 
+     public int hashCode() {
+diff --git a/src/main/java/net/minecraft/server/NextTickListEntry.java b/src/main/java/net/minecraft/server/NextTickListEntry.java
+index d67d6bd9..76e8c9ff 100644
+--- a/src/main/java/net/minecraft/server/NextTickListEntry.java
++++ b/src/main/java/net/minecraft/server/NextTickListEntry.java
+@@ -1,6 +1,6 @@
+ package net.minecraft.server;
+ 
+-public class NextTickListEntry implements Comparable {
++public class NextTickListEntry implements Comparable<NextTickListEntry> { // Canyon - fix decompile error
+ 
+     private static long f = 0L;
+     public int a;
+@@ -29,7 +29,14 @@ public class NextTickListEntry implements Comparable {
+     }
+ 
+     public int hashCode() {
+-        return (this.a * 128 * 1024 + this.c * 128 + this.b) * 256 + this.d;
++        // Canyon start - improve hash code
++        //return (this.a * 128 * 1024 + this.c * 128 + this.b) * 256 + this.d;
++        int result = Integer.hashCode(a);
++        result = 31 * result + Integer.hashCode(c);
++        result = 31 * result + Integer.hashCode(b);
++        result = 31 * result + Integer.hashCode(d);
++        return result;
++        // Canyon end
+     }
+ 
+     public NextTickListEntry a(long i) {
+-- 
+2.22.0
+
