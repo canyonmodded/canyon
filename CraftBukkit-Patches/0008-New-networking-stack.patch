@@ -1,4 +1,4 @@
-From b7cef826ff7bfbfeae1a473638623a86252de704 Mon Sep 17 00:00:00 2001
+From b9966888b0d552497c4c6cd3a4b8db56919dfba4 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -296,10 +296,10 @@ index 00000000..8069bdb3
 +}
 diff --git a/src/main/java/com/canyonmodded/network/PacketDecoder.java b/src/main/java/com/canyonmodded/network/PacketDecoder.java
 new file mode 100644
-index 00000000..226a3bb5
+index 00000000..e71f83d0
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/PacketDecoder.java
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,32 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.buffer.ByteBuf;
@@ -317,6 +317,10 @@ index 00000000..226a3bb5
 +    protected void decode(ChannelHandlerContext ctx, ByteBuf buf, List<Object> list) throws Exception {
 +        // Minecraft Beta packets do not have a length - rather, the server "knows" the length of each packet it's going
 +        // to read.
++        if (!buf.isReadable()) {
++            return;
++        }
++
 +        int ri = buf.readerIndex();
 +        DataInputStream stream = new DataInputStream(new ByteBufInputStream(buf));
 +        try {
