@@ -1,4 +1,4 @@
-From 93ed99c130c801e47bcabeb154e366c3e8cfb37e Mon Sep 17 00:00:00 2001
+From 3e617dcbf28682d507b74f2ebeeeba2bf590e549 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -671,6 +671,18 @@ index f83acc41..525c00ff 100644
              System.out.println("Reached end of stream");
              return null;
          }
+diff --git a/src/main/java/net/minecraft/server/ThreadServerApplication.java b/src/main/java/net/minecraft/server/ThreadServerApplication.java
+index 4e49faee..3f8a9183 100644
+--- a/src/main/java/net/minecraft/server/ThreadServerApplication.java
++++ b/src/main/java/net/minecraft/server/ThreadServerApplication.java
+@@ -1,6 +1,6 @@
+ package net.minecraft.server;
+ 
+-public final class ThreadServerApplication extends Thread {
++public final class ThreadServerApplication extends io.netty.util.concurrent.FastThreadLocalThread { // Canyon
+ 
+     final MinecraftServer a;
+ 
 -- 
 2.22.0
 

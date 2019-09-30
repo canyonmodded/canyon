@@ -38,6 +38,7 @@ function import {
 import RegionFile
 import ChunkCoordIntPair
 import NextTickListEntry
+import ThreadServerApplication
 
 cd "$basedir/CraftBukkit"
 $gitcmd add . -A >/dev/null 2>&1
