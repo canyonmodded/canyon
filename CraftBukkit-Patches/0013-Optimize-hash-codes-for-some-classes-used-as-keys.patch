@@ -1,4 +1,4 @@
-From 2e0ee5d6c188f0b842a6c9a98751dfddc7e685bc Mon Sep 17 00:00:00 2001
+From c1254e8f0c61fdbb63e6c3e55a4571bea358d8db Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sun, 29 Sep 2019 18:54:13 -0400
 Subject: [PATCH] Optimize hash codes for some classes used as keys
@@ -23,18 +23,10 @@ index f3a2e80d..c8f15d81 100644
  
      public int hashCode() {
 diff --git a/src/main/java/net/minecraft/server/NextTickListEntry.java b/src/main/java/net/minecraft/server/NextTickListEntry.java
-index d67d6bd9..76e8c9ff 100644
+index b461a80f..76e8c9ff 100644
 --- a/src/main/java/net/minecraft/server/NextTickListEntry.java
 +++ b/src/main/java/net/minecraft/server/NextTickListEntry.java
-@@ -1,6 +1,6 @@
- package net.minecraft.server;
- 
--public class NextTickListEntry implements Comparable {
-+public class NextTickListEntry implements Comparable<NextTickListEntry> { // Canyon - fix decompile error
- 
-     private static long f = 0L;
-     public int a;
-@@ -29,7 +29,14 @@ public class NextTickListEntry implements Comparable {
+@@ -29,7 +29,14 @@ public class NextTickListEntry implements Comparable<NextTickListEntry> { // Can
      }
  
      public int hashCode() {

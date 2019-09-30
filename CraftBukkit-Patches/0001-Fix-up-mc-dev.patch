@@ -1,4 +1,4 @@
-From 69d9cf72fc6832b9db6fba5daa5fa7fd50e230fd Mon Sep 17 00:00:00 2001
+From 7c82bc5cfd158e01a76c64d19bff5444892b7e19 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 1 Jun 2019 03:06:56 -0400
 Subject: [PATCH] Fix up mc-dev
@@ -33,6 +33,18 @@ index c232801a..59358fbd 100644
          if (convertable.isConvertable(s)) {
              log.info("Converting map!");
              convertable.convert(s, new ConvertProgressUpdater(this));
+diff --git a/src/main/java/net/minecraft/server/NextTickListEntry.java b/src/main/java/net/minecraft/server/NextTickListEntry.java
+index d67d6bd9..b461a80f 100644
+--- a/src/main/java/net/minecraft/server/NextTickListEntry.java
++++ b/src/main/java/net/minecraft/server/NextTickListEntry.java
+@@ -1,6 +1,6 @@
+ package net.minecraft.server;
+ 
+-public class NextTickListEntry implements Comparable {
++public class NextTickListEntry implements Comparable<NextTickListEntry> { // Canyon - fix decompile error
+ 
+     private static long f = 0L;
+     public int a;
 diff --git a/src/main/java/net/minecraft/server/RegionFile.java b/src/main/java/net/minecraft/server/RegionFile.java
 index 8e49cbc4..1aca87dd 100644
 --- a/src/main/java/net/minecraft/server/RegionFile.java

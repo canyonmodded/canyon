@@ -1,4 +1,4 @@
-From b9966888b0d552497c4c6cd3a4b8db56919dfba4 Mon Sep 17 00:00:00 2001
+From 93ed99c130c801e47bcabeb154e366c3e8cfb37e Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -74,7 +74,7 @@ index 00000000..d645e7c9
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NettyBootstrap.java b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
 new file mode 100644
-index 00000000..32f8b14a
+index 00000000..a8688f9c
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
 @@ -0,0 +1,99 @@
@@ -137,7 +137,7 @@ index 00000000..32f8b14a
 +        if (KQueue.isAvailable()) {
 +            MinecraftServer.log.info("Using kqueue channel type");
 +        } else if (Epoll.isAvailable()) {
-+            MinecraftServer.log.info("Using epoll channels type");
++            MinecraftServer.log.info("Using epoll channel type");
 +        } else {
 +            MinecraftServer.log.info("Using NIO channel type");
 +        }
@@ -179,19 +179,18 @@ index 00000000..32f8b14a
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NettyNetworkManager.java b/src/main/java/com/canyonmodded/network/NettyNetworkManager.java
 new file mode 100644
-index 00000000..34be2e85
+index 00000000..ad6df2e1
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NettyNetworkManager.java
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,57 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.channel.Channel;
-+import net.minecraft.server.NetHandler;
-+import net.minecraft.server.NetworkManager;
-+import net.minecraft.server.Packet;
++import net.minecraft.server.*;
 +
 +public class NettyNetworkManager extends NetworkManager {
 +    private final Channel channel;
++    private boolean closed = false;
 +
 +    public NettyNetworkManager(Channel channel, NetHandler nethandler) {
 +        super(channel, nethandler);
@@ -211,18 +210,29 @@ index 00000000..34be2e85
 +    @Override
 +    public void a(String s, Object... aobject) {
 +        super.a(s, aobject);
-+        this.channel.close();
++        this.d();
 +    }
 +
 +    @Override
 +    public void d() {
 +        // Actually disconnects the player
-+        this.channel.close();
++        if (!this.closed) {
++            this.closed = true;
++            this.channel.close();
++        }
 +    }
 +
 +    @Override
 +    public void queue(Packet packet) {
-+        this.channel.writeAndFlush(packet, this.channel.voidPromise());
++        if (isPacketUrgent(packet)) {
++            this.channel.writeAndFlush(packet, this.channel.voidPromise());
++        } else {
++            this.channel.write(packet, this.channel.voidPromise());
++        }
++    }
++
++    private boolean isPacketUrgent(Packet packet) {
++        return packet instanceof Packet2Handshake || packet instanceof Packet1Login || packet instanceof Packet0KeepAlive;
 +    }
 +
 +    @Override
@@ -232,17 +242,19 @@ index 00000000..34be2e85
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java b/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java
 new file mode 100644
-index 00000000..8069bdb3
+index 00000000..0d3f41f4
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java
-@@ -0,0 +1,58 @@
+@@ -0,0 +1,65 @@
 +package com.canyonmodded.network;
 +
++import io.netty.channel.Channel;
 +import io.netty.channel.ChannelHandlerContext;
 +import io.netty.channel.SimpleChannelInboundHandler;
 +import io.netty.handler.timeout.ReadTimeoutException;
 +import net.minecraft.server.*;
 +
++import java.nio.channels.ClosedChannelException;
 +import java.util.concurrent.ScheduledFuture;
 +import java.util.concurrent.TimeUnit;
 +
@@ -260,6 +272,11 @@ index 00000000..8069bdb3
 +                ((NetLoginHandler) h).a();
 +            } else if (h instanceof NetServerHandler) {
 +                ((NetServerHandler) h).a();
++            }
++
++            Channel ch = networkManager.getChannel();
++            if (ch.isActive()) {
++                ch.flush();
 +            }
 +        }, 0, 50, TimeUnit.MILLISECONDS);
 +    }
@@ -289,7 +306,7 @@ index 00000000..8069bdb3
 +    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 +        if (cause instanceof ReadTimeoutException) {
 +            networkManager.a("disconnect.timeout");
-+        } else {
++        } else if (!(cause instanceof ClosedChannelException)) {
 +            networkManager.a(cause);
 +        }
 +    }
@@ -576,7 +593,7 @@ index a8241311..68dcfca1 100644
              ChunkCompressionThread.sendPacket(this.player, packet);
              packet = null;
 diff --git a/src/main/java/net/minecraft/server/NetworkManager.java b/src/main/java/net/minecraft/server/NetworkManager.java
-index 11cf7db8..4aa2dcc0 100644
+index 11cf7db8..00cc5ab7 100644
 --- a/src/main/java/net/minecraft/server/NetworkManager.java
 +++ b/src/main/java/net/minecraft/server/NetworkManager.java
 @@ -24,7 +24,7 @@ public class NetworkManager {
@@ -602,15 +619,17 @@ index 11cf7db8..4aa2dcc0 100644
      public NetworkManager(Socket socket, String s, NetHandler nethandler) {
          this.socket = socket;
          this.i = socket.getRemoteSocketAddress();
-@@ -169,7 +176,7 @@ public class NetworkManager {
+@@ -169,8 +176,8 @@ public class NetworkManager {
          }
      }
  
 -    private void a(Exception exception) {
+-        exception.printStackTrace();
 +    public void a(Throwable exception) { // Canyon - private -> public, Exception -> Throwable
-         exception.printStackTrace();
++        //exception.printStackTrace(); // Canyon - suppress spam
          this.a("disconnect.genericReason", new Object[] { "Internal exception: " + exception.toString()});
      }
+ 
 @@ -179,6 +186,12 @@ public class NetworkManager {
              this.t = true;
              this.u = s;
