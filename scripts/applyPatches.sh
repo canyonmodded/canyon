@@ -74,7 +74,7 @@ echo "Importing MC Dev"
 # Apply Canyon
 cd "$basedir"
 (
-    #applyPatch "Bukkit" Canyon-API HEAD &&
+    applyPatch "Bukkit" Canyon-API HEAD &&
     applyPatch "CraftBukkit" Canyon-Server HEAD
 ) || (
     echo "Failed to apply Canyon Patches"
