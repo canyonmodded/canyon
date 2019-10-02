@@ -1,4 +1,4 @@
-From 3e617dcbf28682d507b74f2ebeeeba2bf590e549 Mon Sep 17 00:00:00 2001
+From 8ef747f63ff58b57f1ebde912424bdb50bc3bd18 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -389,7 +389,7 @@ index 00000000..724e3b69
 +    }
 +}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
-index 9ab16a1b..e9072029 100644
+index e789839f..968b4fae 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
 +++ b/src/main/java/net/minecraft/server/MinecraftServer.java
 @@ -4,18 +4,16 @@ import java.awt.GraphicsEnvironment;
@@ -452,9 +452,9 @@ index 9ab16a1b..e9072029 100644
 +        }*/
 +        // Canyon end
  
-         // Canyon start - the login endpoint used doesn't work any more, so why bother?
-         /*
-@@ -191,6 +196,24 @@ public class MinecraftServer implements Runnable, ICommandListener {
+         // Canyon start - note on online/offline mode
+         if (!this.onlineMode) {
+@@ -192,6 +197,24 @@ public class MinecraftServer implements Runnable, ICommandListener {
          // Canyon end
  
          this.serverConfigurationManager = new ServerConfigurationManager(this);
@@ -479,7 +479,7 @@ index 9ab16a1b..e9072029 100644
          // CraftBukkit - removed trackers
          long j = System.nanoTime();
          String s1 = this.propertyManager.getString("level-name", "world");
-@@ -505,6 +528,12 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -506,6 +529,12 @@ public class MinecraftServer implements Runnable, ICommandListener {
          }
      }
  
@@ -492,7 +492,7 @@ index 9ab16a1b..e9072029 100644
      private void h() {
          ArrayList arraylist = new ArrayList();
          Iterator iterator = trackerList.keySet().iterator();
-@@ -530,6 +559,18 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -531,6 +560,18 @@ public class MinecraftServer implements Runnable, ICommandListener {
          Vec3D.a();
          ++this.ticks;
  
@@ -511,7 +511,7 @@ index 9ab16a1b..e9072029 100644
          ((CraftScheduler) this.server.getScheduler()).mainThreadHeartbeat(this.ticks); // CraftBukkit
  
          for (j = 0; j < this.worlds.size(); ++j) { // CraftBukkit
-@@ -555,7 +596,7 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -556,7 +597,7 @@ public class MinecraftServer implements Runnable, ICommandListener {
              }
          // } // CraftBukkit
  

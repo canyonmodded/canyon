@@ -1,4 +1,4 @@
-From 990b25fbd26a658c2b7ef6549833f8d41b767a25 Mon Sep 17 00:00:00 2001
+From 748ee8d70f475f7fd734e0cefb6cea929fd99acf Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Fri, 23 Aug 2019 16:02:34 -0400
 Subject: [PATCH] Bukkit scheduler rewrite
@@ -320,7 +320,7 @@ index 00000000..6a753fd4
 +    }
 +}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
-index e9072029..629d525a 100644
+index 968b4fae..3850cfe5 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
 +++ b/src/main/java/net/minecraft/server/MinecraftServer.java
 @@ -14,6 +14,7 @@ import java.io.PrintStream;
@@ -331,7 +331,7 @@ index e9072029..629d525a 100644
  import jline.ConsoleReader;
  import joptsimple.OptionSet;
  import org.bukkit.World.Environment;
-@@ -571,7 +572,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -572,7 +573,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
          }
          // Canyon end
  
