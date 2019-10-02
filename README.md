@@ -1,7 +1,8 @@
 # Canyon
 
 Canyon is a fork of CraftBukkit for Minecraft Beta 1.7.3. It includes multiple
-enhancements whilst also retaining compatibility with old Bukkit plugins.
+enhancements whilst also retaining compatibility with old Bukkit plugins and
+mods as much as possible.
 
 ## Legality
 
@@ -39,4 +40,8 @@ the Minecraft core).
 
 ## Credits
 
-* [Paper](https://papermc.io/): build system, backports
+* [Paper](https://papermc.io/): build system and some backports. Tacos, Taylor
+  Swift, and cats are amazing.
+* [Modification Station](https://discord.gg/Q2VguhU): advice, contributions,
+  and testers. A great community to be in if you're interested in the old
+  pre-release version of Minecraft, from pre-alpha to beta 1.8.
