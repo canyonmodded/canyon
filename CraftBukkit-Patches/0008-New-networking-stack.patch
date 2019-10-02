@@ -1,4 +1,4 @@
-From 8ef747f63ff58b57f1ebde912424bdb50bc3bd18 Mon Sep 17 00:00:00 2001
+From b996ff83c5417e0f99b410f6a45cb5914d61564f Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -521,7 +521,7 @@ index e789839f..968b4fae 100644
  
          // CraftBukkit start
 diff --git a/src/main/java/net/minecraft/server/NetLoginHandler.java b/src/main/java/net/minecraft/server/NetLoginHandler.java
-index 99e775b8..abe11b5e 100644
+index 99e775b8..a976679b 100644
 --- a/src/main/java/net/minecraft/server/NetLoginHandler.java
 +++ b/src/main/java/net/minecraft/server/NetLoginHandler.java
 @@ -1,10 +1,12 @@
@@ -538,7 +538,7 @@ index 99e775b8..abe11b5e 100644
  
      public static Logger a = Logger.getLogger("Minecraft");
      private static Random d = new Random();
-@@ -22,6 +24,14 @@ public class NetLoginHandler extends NetHandler {
+@@ -22,6 +24,21 @@ public class NetLoginHandler extends NetHandler {
          this.networkManager.f = 0;
      }
  
@@ -548,12 +548,19 @@ index 99e775b8..abe11b5e 100644
 +        this.networkManager = new NettyNetworkManager(ch, this);
 +        this.networkManager.f = 0;
 +    }
++
++    public io.netty.channel.Channel getChannel() {
++        if (this.networkManager instanceof com.canyonmodded.network.NettyNetworkManager) {
++            return ((com.canyonmodded.network.NettyNetworkManager) this.networkManager).getChannel();
++        }
++        return null;
++    }
 +    // Canyon end
 +
      // CraftBukkit start
      public Socket getSocket() {
          return this.networkManager.socket;
-@@ -71,7 +81,7 @@ public class NetLoginHandler extends NetHandler {
+@@ -71,7 +88,7 @@ public class NetLoginHandler extends NetHandler {
              }
          } else {
              if (!this.server.onlineMode) {
@@ -562,7 +569,7 @@ index 99e775b8..abe11b5e 100644
              } else {
                  (new ThreadLoginVerifier(this, packet1login, this.server.server)).start(); // CraftBukkit
              }
-@@ -96,7 +106,7 @@ public class NetLoginHandler extends NetHandler {
+@@ -96,7 +113,7 @@ public class NetLoginHandler extends NetHandler {
              // this.server.serverConfigurationManager.sendAll(new Packet3Chat("\u00A7e" + entityplayer.name + " joined the game."));  // CraftBukkit - message moved to join event
              this.server.serverConfigurationManager.c(entityplayer);
              netserverhandler.a(entityplayer.locX, entityplayer.locY, entityplayer.locZ, entityplayer.yaw, entityplayer.pitch);
@@ -571,7 +578,7 @@ index 99e775b8..abe11b5e 100644
              netserverhandler.sendPacket(new Packet4UpdateTime(entityplayer.getPlayerTime())); // CraftBukkit - add support for player specific time
              entityplayer.syncInventory();
          }
-@@ -110,6 +120,7 @@ public class NetLoginHandler extends NetHandler {
+@@ -110,6 +127,7 @@ public class NetLoginHandler extends NetHandler {
      }
  
      public void a(Packet packet) {
@@ -671,6 +678,31 @@ index f83acc41..525c00ff 100644
              System.out.println("Reached end of stream");
              return null;
          }
+diff --git a/src/main/java/net/minecraft/server/ThreadLoginVerifier.java b/src/main/java/net/minecraft/server/ThreadLoginVerifier.java
+index d9ff03f4..310d022e 100644
+--- a/src/main/java/net/minecraft/server/ThreadLoginVerifier.java
++++ b/src/main/java/net/minecraft/server/ThreadLoginVerifier.java
+@@ -37,11 +37,18 @@ class ThreadLoginVerifier extends Thread {
+             bufferedreader.close();
+             if (s1.equals("YES")) {
+                 // CraftBukkit start
+-                if (this.netLoginHandler.getSocket() == null) {
++                // Canyon start - new networking stack
++                java.net.InetAddress remoteAddr;
++                if (this.netLoginHandler.getSocket() != null) {
++                    remoteAddr = this.netLoginHandler.getSocket().getInetAddress();
++                } else if (this.netLoginHandler.getChannel() != null && this.netLoginHandler.getChannel().isActive()) {
++                    remoteAddr = ((java.net.InetSocketAddress) this.netLoginHandler.getChannel().remoteAddress()).getAddress();
++                } else {
+                     return;
+                 }
+ 
+-                PlayerPreLoginEvent event = new PlayerPreLoginEvent(this.loginPacket.name, this.netLoginHandler.getSocket().getInetAddress());
++                PlayerPreLoginEvent event = new PlayerPreLoginEvent(this.loginPacket.name, remoteAddr);
++                // Canyon end
+                 this.server.getPluginManager().callEvent(event);
+ 
+                 if (event.getResult() != PlayerPreLoginEvent.Result.ALLOWED) {
 diff --git a/src/main/java/net/minecraft/server/ThreadServerApplication.java b/src/main/java/net/minecraft/server/ThreadServerApplication.java
 index 4e49faee..3f8a9183 100644
 --- a/src/main/java/net/minecraft/server/ThreadServerApplication.java
