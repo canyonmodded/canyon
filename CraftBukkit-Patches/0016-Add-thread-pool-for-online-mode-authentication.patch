@@ -1,4 +1,4 @@
-From cbc3d8dcc819f251d7e3f6fdbc6665eea85fd816 Mon Sep 17 00:00:00 2001
+From a6a86544d19b3b0e237c4c9e6d14f6a7de937d6e Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Tue, 1 Oct 2019 23:41:13 -0400
 Subject: [PATCH] Add thread pool for online-mode authentication
@@ -69,5 +69,5 @@ index 310d022e..991c030e 100644
      final Packet1Login loginPacket;
  
 -- 
-2.22.0
+2.22.0.windows.1
 
