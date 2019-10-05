@@ -39,6 +39,7 @@ import RegionFile
 import ChunkCoordIntPair
 import NextTickListEntry
 import ThreadServerApplication
+import BlockChest
 
 cd "$basedir/CraftBukkit"
 $gitcmd add . -A >/dev/null 2>&1
