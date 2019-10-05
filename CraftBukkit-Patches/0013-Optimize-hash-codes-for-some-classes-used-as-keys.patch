@@ -1,27 +1,9 @@
-From c1254e8f0c61fdbb63e6c3e55a4571bea358d8db Mon Sep 17 00:00:00 2001
+From 36a1665874ce7e1c1930fd28f56fba14a57abed2 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sun, 29 Sep 2019 18:54:13 -0400
 Subject: [PATCH] Optimize hash codes for some classes used as keys
 
 
-diff --git a/src/main/java/net/minecraft/server/ChunkCoordIntPair.java b/src/main/java/net/minecraft/server/ChunkCoordIntPair.java
-index f3a2e80d..c8f15d81 100644
---- a/src/main/java/net/minecraft/server/ChunkCoordIntPair.java
-+++ b/src/main/java/net/minecraft/server/ChunkCoordIntPair.java
-@@ -11,7 +11,12 @@ public class ChunkCoordIntPair {
-     }
- 
-     public static int a(int i, int j) {
--        return (i < 0 ? Integer.MIN_VALUE : 0) | (i & 32767) << 16 | (j < 0 ? '\u8000' : 0) | j & 32767;
-+        // Canyon start - improve hash code
-+        //return (i < 0 ? Integer.MIN_VALUE : 0) | (i & 32767) << 16 | (j < 0 ? '\u8000' : 0) | j & 32767;
-+        int result = Integer.hashCode(i);
-+        result = 31 * result + Integer.hashCode(j);
-+        return result;
-+        // Canyon end
-     }
- 
-     public int hashCode() {
 diff --git a/src/main/java/net/minecraft/server/NextTickListEntry.java b/src/main/java/net/minecraft/server/NextTickListEntry.java
 index b461a80f..76e8c9ff 100644
 --- a/src/main/java/net/minecraft/server/NextTickListEntry.java
