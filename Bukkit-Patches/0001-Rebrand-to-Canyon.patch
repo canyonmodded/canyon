@@ -1,23 +1,53 @@
-From 7f00cc8ef88a589a0181d063b19ffe859bd885f7 Mon Sep 17 00:00:00 2001
+From bf37c8a0ba23df1af5630f5152d50ed184e3faf0 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Fri, 23 Aug 2019 23:38:14 -0400
 Subject: [PATCH] Rebrand to Canyon
 
 
 diff --git a/pom.xml b/pom.xml
-index 7e841f0b..c77ceb1d 100644
+index 7e841f0b..d93fa53b 100644
 --- a/pom.xml
 +++ b/pom.xml
-@@ -1,7 +1,7 @@
+@@ -1,9 +1,14 @@
  <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
      <modelVersion>4.0.0</modelVersion>
 -    <groupId>org.bukkit</groupId>
 -    <artifactId>bukkit</artifactId>
-+    <groupId>com.canyonmodded</groupId>
+-    <version>0.0.1-SNAPSHOT</version>
+-    <name>Bukkit</name>
++    <parent>
++        <groupId>com.canyonmodded</groupId>
++        <artifactId>canyon-parent</artifactId>
++        <version>1.7.3</version>
++        <relativePath>../pom.xml</relativePath>
++    </parent>
 +    <artifactId>canyon-api</artifactId>
-     <version>0.0.1-SNAPSHOT</version>
-     <name>Bukkit</name>
++    <version>1.7.3</version>
++    <name>Canyon-API</name>
      <properties>
+         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+     </properties>
+@@ -28,16 +33,16 @@
+             <plugin>
+                 <groupId>org.apache.maven.plugins</groupId>
+                 <artifactId>maven-compiler-plugin</artifactId>
+-                <version>2.0.2</version>
++                <version>3.8.1</version>
+                 <configuration>
+-                    <source>1.5</source>
+-                    <target>1.5</target>
++                    <source>1.8</source>
++                    <target>1.8</target>
+                 </configuration>
+             </plugin>
+             <plugin>
+                 <groupId>org.apache.maven.plugins</groupId>
+                 <artifactId>maven-shade-plugin</artifactId>
+-                <version>1.4</version>
++                <version>3.2.1</version>
+                 <executions>
+                     <execution>
+                         <phase>package</phase>
 -- 
-2.22.0
+2.22.0.windows.1
 
