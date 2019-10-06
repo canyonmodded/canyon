@@ -40,6 +40,7 @@ import ChunkCoordIntPair
 import NextTickListEntry
 import ThreadServerApplication
 import BlockChest
+import BlockGrass
 
 cd "$basedir/CraftBukkit"
 $gitcmd add . -A >/dev/null 2>&1

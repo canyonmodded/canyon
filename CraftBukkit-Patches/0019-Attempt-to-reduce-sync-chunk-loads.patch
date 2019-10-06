@@ -1,4 +1,4 @@
-From 90668a63728d18b4dcbb7679d014ff8ec3b44a83 Mon Sep 17 00:00:00 2001
+From 186c2f46297b84957014dae1d21430dab3fc2a01 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sun, 6 Oct 2019 01:39:11 -0400
 Subject: [PATCH] Attempt to reduce sync chunk loads
@@ -17,19 +17,23 @@ index 803067f7..b16f9a4b 100644
  
                  if (world.getTypeId(l, i1, j1) == Block.DIRT.id && world.getLightLevel(l, i1 + 1, j1) >= 4 && Block.q[k1] <= 2) {
 diff --git a/src/main/java/net/minecraft/server/SpawnerCreature.java b/src/main/java/net/minecraft/server/SpawnerCreature.java
-index fda0a090..18bd35be 100644
+index fda0a090..bceca47d 100644
 --- a/src/main/java/net/minecraft/server/SpawnerCreature.java
 +++ b/src/main/java/net/minecraft/server/SpawnerCreature.java
-@@ -37,7 +37,7 @@ public final class SpawnerCreature {
+@@ -37,10 +37,11 @@ public final class SpawnerCreature {
                  int k = MathHelper.floor(entityhuman.locX / 16.0D);
  
                  j = MathHelper.floor(entityhuman.locZ / 16.0D);
 -                byte b0 = 8;
-+                byte b0 = (byte) world.getServer().getViewDistance();
++                byte b0 = (byte) world.getServer().getViewDistance(); // Canyon - only consider view distance
  
                  for (int l = -b0; l <= b0; ++l) {
                      for (int i1 = -b0; i1 <= b0; ++i1) {
-@@ -93,6 +93,7 @@ public final class SpawnerCreature {
++                        if (!world.chunkProvider.isChunkLoaded(l + k, i1 + j)) continue; // Canyon - do not try to spawn mobs in unloaded chunks, causes sync loads
+                         b.add(new ChunkCoordIntPair(l + k, i1 + j));
+                     }
+                 }
+@@ -93,6 +94,7 @@ public final class SpawnerCreature {
                              int j2 = chunkposition.y;
                              int k2 = chunkposition.z;
  
@@ -37,7 +41,7 @@ index fda0a090..18bd35be 100644
                              if (!world.e(i2, j2, k2) && world.getMaterial(i2, j2, k2) == enumcreaturetype.c()) {
                                  int l2 = 0;
  
-@@ -155,6 +156,7 @@ public final class SpawnerCreature {
+@@ -155,6 +157,7 @@ public final class SpawnerCreature {
      }
  
      private static boolean a(EnumCreatureType enumcreaturetype, World world, int i, int j, int k) {
