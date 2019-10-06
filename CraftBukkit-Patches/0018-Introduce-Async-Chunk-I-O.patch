@@ -1,4 +1,4 @@
-From 1b8e72d3470dec5737a3d9cf825884ddacc86736 Mon Sep 17 00:00:00 2001
+From c2c7c5cc9d370c885764aa487b65250ae494a6b1 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 5 Oct 2019 03:08:44 -0400
 Subject: [PATCH] Introduce Async Chunk I/O
@@ -6,14 +6,15 @@ Subject: [PATCH] Introduce Async Chunk I/O
 Highly experimental and only supports async chunk loads. More TBD.
 
 diff --git a/src/main/java/net/minecraft/server/ChunkProviderServer.java b/src/main/java/net/minecraft/server/ChunkProviderServer.java
-index 0b232fd1..84b94903 100644
+index 0b232fd1..d1672266 100644
 --- a/src/main/java/net/minecraft/server/ChunkProviderServer.java
 +++ b/src/main/java/net/minecraft/server/ChunkProviderServer.java
-@@ -21,6 +21,15 @@ import org.bukkit.generator.BlockPopulator;
+@@ -21,6 +21,16 @@ import org.bukkit.generator.BlockPopulator;
  
  public class ChunkProviderServer implements IChunkProvider {
  
 +    // Canyon start
++    private static final boolean DEBUG_SYNC_LOADS = Boolean.getBoolean("canyon.debug-sync-loads");
 +    private static final java.util.concurrent.ExecutorService CHUNK_SERVICE = new java.util.concurrent.ThreadPoolExecutor(
 +            Runtime.getRuntime().availableProcessors(), Runtime.getRuntime().availableProcessors(),
 +            Integer.MAX_VALUE, java.util.concurrent.TimeUnit.SECONDS,
@@ -25,7 +26,7 @@ index 0b232fd1..84b94903 100644
      // CraftBukkit start
      public LongHashset unloadQueue = new LongHashset();
      public Chunk emptyChunk;
-@@ -54,29 +63,48 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -54,29 +64,52 @@ public class ChunkProviderServer implements IChunkProvider {
          }
      }
  
@@ -53,6 +54,10 @@ index 0b232fd1..84b94903 100644
 +        if (chunk != null) {
 +            return java.util.concurrent.CompletableFuture.completedFuture(chunk);
 +        } else {
++            if (immediate && DEBUG_SYNC_LOADS)  {
++                MinecraftServer.log.warning("SYNC CHUNK LOAD REQUEST @ " + i + "," + j);
++                new Throwable().printStackTrace();
++            }
 +            return this.requestChunkLoad(i, j, immediate);
 +        }
 +    }
@@ -86,7 +91,7 @@ index 0b232fd1..84b94903 100644
              }
  
              // CraftBukkit start
-@@ -87,11 +115,13 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -87,11 +120,13 @@ public class ChunkProviderServer implements IChunkProvider {
                   * the World constructor. We can't reliably alter that, so we have
                   * no way of creating a CraftWorld/CraftServer at that point.
                   */
@@ -102,7 +107,7 @@ index 0b232fd1..84b94903 100644
                  this.getChunkAt(this, i, j);
              }
  
-@@ -105,30 +135,44 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -105,30 +140,44 @@ public class ChunkProviderServer implements IChunkProvider {
  
              if (this.isChunkLoaded(i - 1, j - 1) && !this.getOrCreateChunk(i - 1, j - 1).done && this.isChunkLoaded(i - 1, j - 1) && this.isChunkLoaded(i, j - 1) && this.isChunkLoaded(i - 1, j)) {
                  this.getChunkAt(this, i - 1, j - 1);
@@ -163,7 +168,7 @@ index 0b232fd1..84b94903 100644
          if (this.e == null) {
              return null;
          } else {
-@@ -146,6 +190,7 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -146,6 +195,7 @@ public class ChunkProviderServer implements IChunkProvider {
              }
          }
      }
@@ -171,7 +176,7 @@ index 0b232fd1..84b94903 100644
  
      public void saveChunkNOP(Chunk chunk) { // CraftBukkit - private -> public
          if (this.e != null) {
-@@ -170,7 +215,6 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -170,7 +220,6 @@ public class ChunkProviderServer implements IChunkProvider {
  
      public void getChunkAt(IChunkProvider ichunkprovider, int i, int j) {
          Chunk chunk = this.getOrCreateChunk(i, j);
@@ -179,12 +184,12 @@ index 0b232fd1..84b94903 100644
          if (!chunk.done) {
              chunk.done = true;
              if (this.chunkProvider != null) {
-@@ -265,4 +309,63 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -265,4 +314,65 @@ public class ChunkProviderServer implements IChunkProvider {
      public boolean canSave() {
          return !this.world.canSave;
      }
 +
-+    // Canyon Start - multistage load process
++    // Canyon Start - async load process
 +    private java.util.concurrent.CompletableFuture<Chunk> requestChunkLoad(int x, int z, boolean immediate) {
 +        ChunkLoadTask task = this.loadQueue.get(x, z);
 +        if (task == null) {
@@ -199,13 +204,19 @@ index 0b232fd1..84b94903 100644
 +                task.toggleNeededImmediately();
 +            }
 +        }
-+        return task.result;
++
++        if (immediate) {
++            return task.immediate;
++        } else {
++            return task.result;
++        }
 +    }
 +
 +    private class ChunkLoadTask implements Runnable, Comparable<ChunkLoadTask> {
 +        private final int x;
 +        private final int z;
 +        private final java.util.concurrent.atomic.AtomicBoolean neededImmediately = new java.util.concurrent.atomic.AtomicBoolean(false);
++        private final java.util.concurrent.CompletableFuture<Chunk> immediate = new java.util.concurrent.CompletableFuture<>();
 +        private final java.util.concurrent.CompletableFuture<Chunk> result = new java.util.concurrent.CompletableFuture<>();
 +
 +        private ChunkLoadTask(int x, int z) {
@@ -220,20 +231,16 @@ index 0b232fd1..84b94903 100644
 +        @Override
 +        public void run() {
 +            Chunk loaded = realLoadChunk(x, z);
-+            if (neededImmediately.get()) {
-+                // We've been requested to hand the goods over now, so we'll do that. Whomever is waiting for this
-+                // chunk will have to complete any post-initialization tasks.
-+                result.complete(loaded);
-+            } else {
-+                world.server.queueTask(() -> {
-+                    if (neededImmediately.get()) {
-+                        // If there was a gap between the task scheduling and now where this flag was set, then we
-+                        // assume the post-init stuff was already done for us.
-+                        return;
-+                    }
-+                    result.complete(ChunkProviderServer.this.postLoadTask(loaded, x, z));
-+                });
-+            }
++            immediate.complete(loaded);
++
++            world.server.queueTask(() -> {
++                if (neededImmediately.get()) {
++                    // If there was a gap between the task scheduling and now where this flag was set, then we
++                    // assume the post-init stuff was already done for us.
++                    return;
++                }
++                result.complete(ChunkProviderServer.this.postLoadTask(loaded, x, z));
++            });
 +        }
 +
 +        @Override
