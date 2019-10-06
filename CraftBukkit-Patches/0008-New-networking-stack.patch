@@ -1,4 +1,4 @@
-From b996ff83c5417e0f99b410f6a45cb5914d61564f Mon Sep 17 00:00:00 2001
+From 6a924c9247121d515a41a6ba19571b61b43a5418 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -9,40 +9,6 @@ versions of Minecraft) onto Minecraft Beta 1.7.3.
 This implementation is simple and still has much room for improvement,
 however it should feel snappier than the old networking stack.
 
-diff --git a/pom.xml b/pom.xml
-index 31d534fb..a1d15ede 100644
---- a/pom.xml
-+++ b/pom.xml
-@@ -92,6 +92,29 @@
-       <type>jar</type>
-       <scope>provided</scope>
-     </dependency>
-+    <dependency>
-+      <groupId>io.netty</groupId>
-+      <artifactId>netty-handler</artifactId>
-+      <version>4.1.38.Final</version>
-+      <type>jar</type>
-+      <scope>compile</scope>
-+    </dependency>
-+    <dependency>
-+      <groupId>io.netty</groupId>
-+      <artifactId>netty-transport-native-epoll</artifactId>
-+      <version>4.1.38.Final</version>
-+      <type>jar</type>
-+      <scope>compile</scope>
-+      <classifier>linux-x86_64</classifier>
-+    </dependency>
-+    <dependency>
-+      <groupId>io.netty</groupId>
-+      <artifactId>netty-transport-native-kqueue</artifactId>
-+      <version>4.1.38.Final</version>
-+      <type>jar</type>
-+      <scope>compile</scope>
-+      <classifier>osx-x86_64</classifier>
-+    </dependency>
-   </dependencies>
-   <!-- This builds a completely 'ready to start' jar with all dependencies inside -->
-   <build>
 diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
 index d7dffe62..971ac06c 100644
 --- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
@@ -351,16 +317,17 @@ index 00000000..e71f83d0
 +}
 diff --git a/src/main/java/com/canyonmodded/network/PacketEncoder.java b/src/main/java/com/canyonmodded/network/PacketEncoder.java
 new file mode 100644
-index 00000000..724e3b69
+index 00000000..17fdb418
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/PacketEncoder.java
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,69 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.buffer.ByteBuf;
 +import io.netty.buffer.ByteBufOutputStream;
 +import io.netty.channel.ChannelHandlerContext;
 +import io.netty.handler.codec.MessageToByteEncoder;
++import io.netty.util.Recycler;
 +import net.minecraft.server.Packet;
 +import net.minecraft.server.Packet51MapChunk;
 +
@@ -369,23 +336,58 @@ index 00000000..724e3b69
 +import java.util.zip.DeflaterOutputStream;
 +
 +public class PacketEncoder extends MessageToByteEncoder<Packet> {
-+    private final ByteArrayOutputStream chunkCompressionBuffer = new ByteArrayOutputStream(8192);
-+
 +    @Override
 +    protected void encode(ChannelHandlerContext ctx, Packet packet, ByteBuf buf) throws Exception {
 +        DataOutputStream out = new DataOutputStream(new ByteBufOutputStream(buf));
 +        if (packet instanceof Packet51MapChunk && ((Packet51MapChunk) packet).g == null) {
 +            // CraftBukkit moves map chunk compression out of the main thread (good) but effectively makes it single
 +            // threaded (bad). Compress the packets here instead, where we can take advantage of multiple cores.
-+            try (DeflaterOutputStream dos = new DeflaterOutputStream(chunkCompressionBuffer)) {
-+                dos.write(((Packet51MapChunk) packet).rawData);
-+            }
-+            ((Packet51MapChunk) packet).g = chunkCompressionBuffer.toByteArray();
-+            ((Packet51MapChunk) packet).h = chunkCompressionBuffer.size();
-+            packet.k = true;
-+            chunkCompressionBuffer.reset();
++            this.handleCompressingMapChunk((Packet51MapChunk) packet, out);
++            return;
 +        }
 +        Packet.a(packet, out);
++    }
++
++    private void handleCompressingMapChunk(Packet51MapChunk packet, DataOutputStream out) throws Exception {
++        RecyclableByteArrayOutputStream compressed = RecyclableByteArrayOutputStream.newInstance();
++        try (DeflaterOutputStream dos = new DeflaterOutputStream(compressed)) {
++            dos.write(packet.rawData);
++        }
++        packet.g = compressed.getInternalBuffer();
++        packet.h = compressed.size();
++        packet.k = true;
++
++        Packet.a(packet, out);
++        compressed.recycle();
++    }
++
++    private static class RecyclableByteArrayOutputStream extends ByteArrayOutputStream {
++        private static final Recycler<RecyclableByteArrayOutputStream> RECYCLER = new Recycler<RecyclableByteArrayOutputStream>() {
++            @Override
++            protected RecyclableByteArrayOutputStream newObject(Handle<RecyclableByteArrayOutputStream> handle) {
++                return new RecyclableByteArrayOutputStream(handle);
++            }
++        };
++
++        private final Recycler.Handle<RecyclableByteArrayOutputStream> handle;
++
++        public static RecyclableByteArrayOutputStream newInstance() {
++            return RECYCLER.get();
++        }
++
++        private RecyclableByteArrayOutputStream(Recycler.Handle<RecyclableByteArrayOutputStream> handle) {
++            super(8192);
++            this.handle = handle;
++        }
++
++        public void recycle() {
++            this.reset();
++            handle.recycle(this);
++        }
++
++        public byte[] getInternalBuffer() {
++            return buf;
++        }
 +    }
 +}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java

@@ -1,4 +1,4 @@
-From aeeaa300690d46448685bd9e821f9cf74dd37a39 Mon Sep 17 00:00:00 2001
+From e5c0db0abe42195a85963ca01a98d08db0e9951a Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Wed, 21 Aug 2019 23:52:44 -0400
 Subject: [PATCH] Bump to Java 8
@@ -6,33 +6,6 @@ Subject: [PATCH] Bump to Java 8
 This does not completely convert the server to use Java 8, but it starts
 us on the path.
 
-diff --git a/pom.xml b/pom.xml
-index 25f664d3..31d534fb 100644
---- a/pom.xml
-+++ b/pom.xml
-@@ -156,7 +156,7 @@
-       <plugin>
-         <groupId>org.apache.maven.plugins</groupId>
-         <artifactId>maven-shade-plugin</artifactId>
--        <version>1.4</version>
-+        <version>3.2.1</version>
-         <executions>
-           <execution>
-             <phase>package</phase>
-@@ -176,10 +176,10 @@
-       <plugin>
-         <groupId>org.apache.maven.plugins</groupId>
-         <artifactId>maven-compiler-plugin</artifactId>
--        <version>2.0.2</version>
-+        <version>3.8.1</version>
-         <configuration>
--          <source>1.5</source>
--          <target>1.5</target>
-+          <source>1.8</source>
-+          <target>1.8</target>
-         </configuration>
-       </plugin>
-     </plugins>
 diff --git a/src/main/java/org/bukkit/craftbukkit/util/Java15Compat.java b/src/main/java/org/bukkit/craftbukkit/util/Java15Compat.java
 deleted file mode 100644
 index c9c5f284..00000000
@@ -135,5 +108,5 @@ index b438e8fa..5880e3c1 100644
          }
      }
 -- 
-2.22.0
+2.22.0.windows.1
 
