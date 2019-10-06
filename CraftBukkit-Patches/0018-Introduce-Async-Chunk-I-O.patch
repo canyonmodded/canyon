@@ -1,4 +1,4 @@
-From c31451f1c515ecb781eb682244ea3475988f7215 Mon Sep 17 00:00:00 2001
+From 1b8e72d3470dec5737a3d9cf825884ddacc86736 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 5 Oct 2019 03:08:44 -0400
 Subject: [PATCH] Introduce Async Chunk I/O
@@ -6,23 +6,26 @@ Subject: [PATCH] Introduce Async Chunk I/O
 Highly experimental and only supports async chunk loads. More TBD.
 
 diff --git a/src/main/java/net/minecraft/server/ChunkProviderServer.java b/src/main/java/net/minecraft/server/ChunkProviderServer.java
-index 0b232fd1..56675268 100644
+index 0b232fd1..84b94903 100644
 --- a/src/main/java/net/minecraft/server/ChunkProviderServer.java
 +++ b/src/main/java/net/minecraft/server/ChunkProviderServer.java
-@@ -21,6 +21,12 @@ import org.bukkit.generator.BlockPopulator;
+@@ -21,6 +21,15 @@ import org.bukkit.generator.BlockPopulator;
  
  public class ChunkProviderServer implements IChunkProvider {
  
 +    // Canyon start
-+    private static final java.util.concurrent.ExecutorService CHUNK_SERVICE = java.util.concurrent.Executors
-+            .newFixedThreadPool(Runtime.getRuntime().availableProcessors(), new com.canyonmodded.util.SimpleDaemonThreadFactory("Async Chunk I/O #%d"));
++    private static final java.util.concurrent.ExecutorService CHUNK_SERVICE = new java.util.concurrent.ThreadPoolExecutor(
++            Runtime.getRuntime().availableProcessors(), Runtime.getRuntime().availableProcessors(),
++            Integer.MAX_VALUE, java.util.concurrent.TimeUnit.SECONDS,
++            new java.util.concurrent.PriorityBlockingQueue<>(),
++            new com.canyonmodded.util.SimpleDaemonThreadFactory("Async Chunk I/O #%d"));
 +    private LongHashtable<ChunkLoadTask> loadQueue = new LongHashtable<>();
 +    // Canyon end
 +
      // CraftBukkit start
      public LongHashset unloadQueue = new LongHashset();
      public Chunk emptyChunk;
-@@ -54,29 +60,48 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -54,29 +63,48 @@ public class ChunkProviderServer implements IChunkProvider {
          }
      }
  
@@ -83,7 +86,7 @@ index 0b232fd1..56675268 100644
              }
  
              // CraftBukkit start
-@@ -87,11 +112,13 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -87,11 +115,13 @@ public class ChunkProviderServer implements IChunkProvider {
                   * the World constructor. We can't reliably alter that, so we have
                   * no way of creating a CraftWorld/CraftServer at that point.
                   */
@@ -99,7 +102,7 @@ index 0b232fd1..56675268 100644
                  this.getChunkAt(this, i, j);
              }
  
-@@ -105,30 +132,44 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -105,30 +135,44 @@ public class ChunkProviderServer implements IChunkProvider {
  
              if (this.isChunkLoaded(i - 1, j - 1) && !this.getOrCreateChunk(i - 1, j - 1).done && this.isChunkLoaded(i - 1, j - 1) && this.isChunkLoaded(i, j - 1) && this.isChunkLoaded(i - 1, j)) {
                  this.getChunkAt(this, i - 1, j - 1);
@@ -160,7 +163,7 @@ index 0b232fd1..56675268 100644
          if (this.e == null) {
              return null;
          } else {
-@@ -146,6 +187,7 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -146,6 +190,7 @@ public class ChunkProviderServer implements IChunkProvider {
              }
          }
      }
@@ -168,7 +171,7 @@ index 0b232fd1..56675268 100644
  
      public void saveChunkNOP(Chunk chunk) { // CraftBukkit - private -> public
          if (this.e != null) {
-@@ -170,7 +212,6 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -170,7 +215,6 @@ public class ChunkProviderServer implements IChunkProvider {
  
      public void getChunkAt(IChunkProvider ichunkprovider, int i, int j) {
          Chunk chunk = this.getOrCreateChunk(i, j);
@@ -176,7 +179,7 @@ index 0b232fd1..56675268 100644
          if (!chunk.done) {
              chunk.done = true;
              if (this.chunkProvider != null) {
-@@ -265,4 +306,58 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -265,4 +309,63 @@ public class ChunkProviderServer implements IChunkProvider {
      public boolean canSave() {
          return !this.world.canSave;
      }
@@ -199,7 +202,7 @@ index 0b232fd1..56675268 100644
 +        return task.result;
 +    }
 +
-+    private class ChunkLoadTask implements Runnable {
++    private class ChunkLoadTask implements Runnable, Comparable<ChunkLoadTask> {
 +        private final int x;
 +        private final int z;
 +        private final java.util.concurrent.atomic.AtomicBoolean neededImmediately = new java.util.concurrent.atomic.AtomicBoolean(false);
@@ -231,6 +234,11 @@ index 0b232fd1..56675268 100644
 +                    result.complete(ChunkProviderServer.this.postLoadTask(loaded, x, z));
 +                });
 +            }
++        }
++
++        @Override
++        public int compareTo(ChunkLoadTask o) {
++            return Boolean.compare(o.neededImmediately.get(), neededImmediately.get());
 +        }
 +    }
 +    // Canyon End
