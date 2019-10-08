@@ -1,0 +1,22 @@
+From 51415288acba6886849c5e510ef7bdcde42bf933 Mon Sep 17 00:00:00 2001
+From: Andrew Steinborn <git@steinborn.me>
+Date: Tue, 8 Oct 2019 19:56:55 -0400
+Subject: [PATCH] Send chunk packets immediately after login
+
+Fixes annoying post-login lag where you can get "stuck" in stone.
+
+diff --git a/src/main/java/net/minecraft/server/NetLoginHandler.java b/src/main/java/net/minecraft/server/NetLoginHandler.java
+index c141051e..f5d4253c 100644
+--- a/src/main/java/net/minecraft/server/NetLoginHandler.java
++++ b/src/main/java/net/minecraft/server/NetLoginHandler.java
+@@ -125,6 +125,7 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
+             if (this.server.networkListenThread != null) this.server.networkListenThread.a(netserverhandler); // Canyon
+             netserverhandler.sendPacket(new Packet4UpdateTime(entityplayer.getPlayerTime())); // CraftBukkit - add support for player specific time
+             entityplayer.syncInventory();
++            entityplayer.a(true); // Canyon - begin sending chunk packets immediately
+             });
+             // Canyon End
+         }
+-- 
+2.22.0
+
