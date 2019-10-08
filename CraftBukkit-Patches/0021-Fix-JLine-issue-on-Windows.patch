@@ -1,4 +1,4 @@
-From e14b1eced6fc98515c5927650194b5f3b110bc32 Mon Sep 17 00:00:00 2001
+From 544ea41d58c1feff47832fdbff3398c626398d59 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Tue, 8 Oct 2019 01:23:37 -0400
 Subject: [PATCH] Fix JLine issue on Windows
