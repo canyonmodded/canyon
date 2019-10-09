@@ -1,4 +1,4 @@
-From dc71480c06b8f7a4ce51b88663cf6ae6a686ffd7 Mon Sep 17 00:00:00 2001
+From e245744639a0df8633e5d350109969a78bec07fb Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -145,10 +145,10 @@ index 00000000..a8688f9c
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NettyNetworkManager.java b/src/main/java/com/canyonmodded/network/NettyNetworkManager.java
 new file mode 100644
-index 00000000..ad6df2e1
+index 00000000..2b9a5a41
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NettyNetworkManager.java
-@@ -0,0 +1,57 @@
+@@ -0,0 +1,49 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.channel.Channel;
@@ -190,15 +190,7 @@ index 00000000..ad6df2e1
 +
 +    @Override
 +    public void queue(Packet packet) {
-+        if (isPacketUrgent(packet)) {
-+            this.channel.writeAndFlush(packet, this.channel.voidPromise());
-+        } else {
-+            this.channel.write(packet, this.channel.voidPromise());
-+        }
-+    }
-+
-+    private boolean isPacketUrgent(Packet packet) {
-+        return packet instanceof Packet2Handshake || packet instanceof Packet1Login || packet instanceof Packet0KeepAlive;
++        this.channel.writeAndFlush(packet, this.channel.voidPromise());
 +    }
 +
 +    @Override
@@ -208,10 +200,10 @@ index 00000000..ad6df2e1
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java b/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java
 new file mode 100644
-index 00000000..0d3f41f4
+index 00000000..25d4811b
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java
-@@ -0,0 +1,65 @@
+@@ -0,0 +1,60 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.channel.Channel;
@@ -238,11 +230,6 @@ index 00000000..0d3f41f4
 +                ((NetLoginHandler) h).a();
 +            } else if (h instanceof NetServerHandler) {
 +                ((NetServerHandler) h).a();
-+            }
-+
-+            Channel ch = networkManager.getChannel();
-+            if (ch.isActive()) {
-+                ch.flush();
 +            }
 +        }, 0, 50, TimeUnit.MILLISECONDS);
 +    }
