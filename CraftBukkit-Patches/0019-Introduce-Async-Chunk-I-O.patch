@@ -1,4 +1,4 @@
-From d0431788c36e80e4d085c0c72e096af8481fc658 Mon Sep 17 00:00:00 2001
+From 42ecd08297143b5e7c1221415ae0e1c7e0e80e49 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 5 Oct 2019 03:08:44 -0400
 Subject: [PATCH] Introduce Async Chunk I/O
@@ -6,7 +6,7 @@ Subject: [PATCH] Introduce Async Chunk I/O
 Highly experimental and only supports async chunk loads. More TBD.
 
 diff --git a/src/main/java/net/minecraft/server/ChunkProviderServer.java b/src/main/java/net/minecraft/server/ChunkProviderServer.java
-index 0b232fd1..e40138e7 100644
+index 0b232fd1..b39098b4 100644
 --- a/src/main/java/net/minecraft/server/ChunkProviderServer.java
 +++ b/src/main/java/net/minecraft/server/ChunkProviderServer.java
 @@ -21,6 +21,16 @@ import org.bukkit.generator.BlockPopulator;
@@ -92,7 +92,7 @@ index 0b232fd1..e40138e7 100644
              }
  
              // CraftBukkit start
-@@ -87,11 +121,13 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -87,48 +121,62 @@ public class ChunkProviderServer implements IChunkProvider {
                   * the World constructor. We can't reliably alter that, so we have
                   * no way of creating a CraftWorld/CraftServer at that point.
                   */
@@ -102,24 +102,30 @@ index 0b232fd1..e40138e7 100644
              // CraftBukkit end
  
 -            if (!chunk.done && this.isChunkLoaded(i + 1, j + 1) && this.isChunkLoaded(i, j + 1) && this.isChunkLoaded(i + 1, j)) {
-+            // Canyon - remove code to load surrounding chunks, conflicts with async chunks
-+            /*
 +            if (!loadedChunk.done && this.isChunkLoaded(i + 1, j + 1) && this.isChunkLoaded(i, j + 1) && this.isChunkLoaded(i + 1, j)) {
                  this.getChunkAt(this, i, j);
              }
  
-@@ -105,30 +141,44 @@ public class ChunkProviderServer implements IChunkProvider {
+-            if (this.isChunkLoaded(i - 1, j) && !this.getOrCreateChunk(i - 1, j).done && this.isChunkLoaded(i - 1, j + 1) && this.isChunkLoaded(i, j + 1) && this.isChunkLoaded(i - 1, j)) {
++            if (this.isChunkLoaded(i - 1, j) && !this.getChunkIfLoaded(i - 1, j).done && this.isChunkLoaded(i - 1, j + 1) && this.isChunkLoaded(i, j + 1) && this.isChunkLoaded(i - 1, j)) {
+                 this.getChunkAt(this, i - 1, j);
+             }
  
-             if (this.isChunkLoaded(i - 1, j - 1) && !this.getOrCreateChunk(i - 1, j - 1).done && this.isChunkLoaded(i - 1, j - 1) && this.isChunkLoaded(i, j - 1) && this.isChunkLoaded(i - 1, j)) {
+-            if (this.isChunkLoaded(i, j - 1) && !this.getOrCreateChunk(i, j - 1).done && this.isChunkLoaded(i + 1, j - 1) && this.isChunkLoaded(i, j - 1) && this.isChunkLoaded(i + 1, j)) {
++            if (this.isChunkLoaded(i, j - 1) && !this.getChunkIfLoaded(i, j - 1).done && this.isChunkLoaded(i + 1, j - 1) && this.isChunkLoaded(i, j - 1) && this.isChunkLoaded(i + 1, j)) {
+                 this.getChunkAt(this, i, j - 1);
+             }
+ 
+-            if (this.isChunkLoaded(i - 1, j - 1) && !this.getOrCreateChunk(i - 1, j - 1).done && this.isChunkLoaded(i - 1, j - 1) && this.isChunkLoaded(i, j - 1) && this.isChunkLoaded(i - 1, j)) {
++            if (this.isChunkLoaded(i - 1, j - 1) && !this.getChunkIfLoaded(i - 1, j - 1).done && this.isChunkLoaded(i - 1, j - 1) && this.isChunkLoaded(i, j - 1) && this.isChunkLoaded(i - 1, j)) {
                  this.getChunkAt(this, i - 1, j - 1);
--            }
+             }
 -        }
-+            }*/
-+
-+            this.loadQueue.remove(i, j);
-+            return loadedChunk;
  
 -        return chunk;
++            this.loadQueue.remove(i, j);
++            return loadedChunk;
++
 +    }
 +    public Chunk getChunkAt(int i, int j) {
 +        Chunk chunk = this.chunks.get(i, j);
@@ -169,7 +175,7 @@ index 0b232fd1..e40138e7 100644
          if (this.e == null) {
              return null;
          } else {
-@@ -146,6 +196,7 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -146,6 +194,7 @@ public class ChunkProviderServer implements IChunkProvider {
              }
          }
      }
@@ -177,7 +183,7 @@ index 0b232fd1..e40138e7 100644
  
      public void saveChunkNOP(Chunk chunk) { // CraftBukkit - private -> public
          if (this.e != null) {
-@@ -170,7 +221,6 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -170,7 +219,6 @@ public class ChunkProviderServer implements IChunkProvider {
  
      public void getChunkAt(IChunkProvider ichunkprovider, int i, int j) {
          Chunk chunk = this.getOrCreateChunk(i, j);
@@ -185,13 +191,20 @@ index 0b232fd1..e40138e7 100644
          if (!chunk.done) {
              chunk.done = true;
              if (this.chunkProvider != null) {
-@@ -265,4 +315,57 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -265,4 +313,64 @@ public class ChunkProviderServer implements IChunkProvider {
      public boolean canSave() {
          return !this.world.canSave;
      }
 +
 +    // Canyon Start - async load process
 +    private java.util.concurrent.CompletableFuture<Chunk> requestChunkLoad(int x, int z, boolean immediate) {
++        if (this.world.server == null) {
++            // The server is not yet available, so do everything sync for now
++            Chunk loaded = realLoadChunk(x, z);
++            Chunk processed = this.postLoadTask(loaded, x, z);
++            return java.util.concurrent.CompletableFuture.completedFuture(processed);
++        }
++
 +        ChunkLoadTask task = this.loadQueue.get(x, z);
 +        if (task == null) {
 +            task = new ChunkLoadTask(x, z);
