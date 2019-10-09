@@ -1,4 +1,4 @@
-From 6a924c9247121d515a41a6ba19571b61b43a5418 Mon Sep 17 00:00:00 2001
+From dc71480c06b8f7a4ce51b88663cf6ae6a686ffd7 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -523,7 +523,7 @@ index e789839f..968b4fae 100644
  
          // CraftBukkit start
 diff --git a/src/main/java/net/minecraft/server/NetLoginHandler.java b/src/main/java/net/minecraft/server/NetLoginHandler.java
-index 99e775b8..a976679b 100644
+index 99e775b8..21347010 100644
 --- a/src/main/java/net/minecraft/server/NetLoginHandler.java
 +++ b/src/main/java/net/minecraft/server/NetLoginHandler.java
 @@ -1,10 +1,12 @@
@@ -562,7 +562,19 @@ index 99e775b8..a976679b 100644
      // CraftBukkit start
      public Socket getSocket() {
          return this.networkManager.socket;
-@@ -71,7 +88,7 @@ public class NetLoginHandler extends NetHandler {
+@@ -30,7 +47,10 @@ public class NetLoginHandler extends NetHandler {
+ 
+     public void a() {
+         if (this.h != null) {
+-            this.b(this.h);
++            // Canyon start - post to main thread
++            final Packet1Login loginPacket = this.h;
++            server.queueTask(() -> this.b(loginPacket));
++            // Canyon end
+             this.h = null;
+         }
+ 
+@@ -71,7 +91,7 @@ public class NetLoginHandler extends NetHandler {
              }
          } else {
              if (!this.server.onlineMode) {
@@ -571,7 +583,7 @@ index 99e775b8..a976679b 100644
              } else {
                  (new ThreadLoginVerifier(this, packet1login, this.server.server)).start(); // CraftBukkit
              }
-@@ -96,7 +113,7 @@ public class NetLoginHandler extends NetHandler {
+@@ -96,7 +116,7 @@ public class NetLoginHandler extends NetHandler {
              // this.server.serverConfigurationManager.sendAll(new Packet3Chat("\u00A7e" + entityplayer.name + " joined the game."));  // CraftBukkit - message moved to join event
              this.server.serverConfigurationManager.c(entityplayer);
              netserverhandler.a(entityplayer.locX, entityplayer.locY, entityplayer.locZ, entityplayer.yaw, entityplayer.pitch);
@@ -580,7 +592,7 @@ index 99e775b8..a976679b 100644
              netserverhandler.sendPacket(new Packet4UpdateTime(entityplayer.getPlayerTime())); // CraftBukkit - add support for player specific time
              entityplayer.syncInventory();
          }
-@@ -110,6 +127,7 @@ public class NetLoginHandler extends NetHandler {
+@@ -110,6 +130,7 @@ public class NetLoginHandler extends NetHandler {
      }
  
      public void a(Packet packet) {
