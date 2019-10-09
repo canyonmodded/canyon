@@ -1,4 +1,4 @@
-From 59033e2df7ba18847c77b1cf88ef34841671f1ca Mon Sep 17 00:00:00 2001
+From d0431788c36e80e4d085c0c72e096af8481fc658 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 5 Oct 2019 03:08:44 -0400
 Subject: [PATCH] Introduce Async Chunk I/O
@@ -244,10 +244,10 @@ index 0b232fd1..e40138e7 100644
 +    // Canyon End
  }
 diff --git a/src/main/java/net/minecraft/server/NetLoginHandler.java b/src/main/java/net/minecraft/server/NetLoginHandler.java
-index dd45b44b..c141051e 100644
+index 145d61a1..dfa5b6d9 100644
 --- a/src/main/java/net/minecraft/server/NetLoginHandler.java
 +++ b/src/main/java/net/minecraft/server/NetLoginHandler.java
-@@ -109,6 +109,11 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
+@@ -112,6 +112,11 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
              a.info(this.b() + " logged in with entity id " + entityplayer.id + " at ([" + entityplayer.world.worldData.name + "] " + entityplayer.locX + ", " + entityplayer.locY + ", " + entityplayer.locZ + ")");
              WorldServer worldserver = (WorldServer) entityplayer.world; // CraftBukkit
              ChunkCoordinates chunkcoordinates = worldserver.getSpawn();
@@ -259,7 +259,7 @@ index dd45b44b..c141051e 100644
              NetServerHandler netserverhandler = new NetServerHandler(this.server, this.networkManager, entityplayer);
  
              netserverhandler.sendPacket(new Packet1Login("", entityplayer.id, worldserver.getSeed(), (byte) worldserver.worldProvider.dimension));
-@@ -120,6 +125,8 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
+@@ -123,6 +128,8 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
              if (this.server.networkListenThread != null) this.server.networkListenThread.a(netserverhandler); // Canyon
              netserverhandler.sendPacket(new Packet4UpdateTime(entityplayer.getPlayerTime())); // CraftBukkit - add support for player specific time
              entityplayer.syncInventory();
