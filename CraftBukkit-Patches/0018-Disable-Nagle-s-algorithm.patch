@@ -1,25 +1,24 @@
-From 17d21b75d0f3ae9dcb1b506e37d9d9ad0d37920e Mon Sep 17 00:00:00 2001
+From 24947638ee88ce0492f2126d620686ac7062c551 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sun, 6 Oct 2019 17:06:39 -0400
 Subject: [PATCH] Disable Nagle's algorithm
 
 
 diff --git a/src/main/java/com/canyonmodded/network/NettyBootstrap.java b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
-index a8688f9c..acd47cfe 100644
+index bd6cce01..40bbdeae 100644
 --- a/src/main/java/com/canyonmodded/network/NettyBootstrap.java
 +++ b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
-@@ -72,6 +72,9 @@ public class NettyBootstrap {
-                 .childHandler(new ChannelInitializer<Channel>() {
+@@ -73,6 +73,8 @@ public class NettyBootstrap {
                      @Override
                      protected void initChannel(Channel channel) throws Exception {
+                         channel.config().setOption(ChannelOption.IP_TOS, 24);
 +                        // Disable Nagle's algorithm
 +                        channel.config().setOption(ChannelOption.TCP_NODELAY, true);
-+
+ 
                          NetLoginHandler handler = new NetLoginHandler(server, channel);
                          channel.pipeline()
-                                 .addLast("read-timeout", new ReadTimeoutHandler(30))
 diff --git a/src/main/java/net/minecraft/server/NetworkManager.java b/src/main/java/net/minecraft/server/NetworkManager.java
-index 00cc5ab7..36435bea 100644
+index 85618930..e393ad56 100644
 --- a/src/main/java/net/minecraft/server/NetworkManager.java
 +++ b/src/main/java/net/minecraft/server/NetworkManager.java
 @@ -59,6 +59,7 @@ public class NetworkManager {
