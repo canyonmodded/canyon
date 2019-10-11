@@ -1,4 +1,4 @@
-From 3c64dd5f0b4b4317a72f6dde7d755bc4b1f1cbe2 Mon Sep 17 00:00:00 2001
+From 2a7db1ffe558e4b50d46324f89761d882456c434 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -40,10 +40,10 @@ index 00000000..d645e7c9
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NettyBootstrap.java b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
 new file mode 100644
-index 00000000..bd6cce01
+index 00000000..0e58eeff
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
-@@ -0,0 +1,101 @@
+@@ -0,0 +1,137 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.bootstrap.ServerBootstrap;
@@ -62,6 +62,8 @@ index 00000000..bd6cce01
 +import net.minecraft.server.NetLoginHandler;
 +
 +import java.net.InetAddress;
++import java.util.List;
++import java.util.concurrent.CopyOnWriteArrayList;
 +
 +public class NettyBootstrap {
 +    private Channel bound;
@@ -70,6 +72,7 @@ index 00000000..bd6cce01
 +    private final InetAddress bind;
 +    private final int port;
 +    private final MinecraftServer server;
++    private final List<NettyNetworkManager> connections = new CopyOnWriteArrayList<>();
 +
 +    public NettyBootstrap(InetAddress bind, int port, MinecraftServer server) {
 +        this.server = server;
@@ -122,6 +125,7 @@ index 00000000..bd6cce01
 +
 +                        NetLoginHandler handler = new NetLoginHandler(server, channel);
 +                        channel.pipeline()
++                                .addLast("connection-manager", new ConnectionManagementHandler(NettyBootstrap.this, (NettyNetworkManager) handler.networkManager))
 +                                .addLast("read-timeout", new ReadTimeoutHandler(30))
 +                                .addLast("packet-decoder", new PacketDecoder())
 +                                .addLast("packet-encoder", new PacketEncoder())
@@ -143,6 +147,38 @@ index 00000000..bd6cce01
 +        }
 +        this.worker.shutdownGracefully();
 +        this.boss.shutdownGracefully();
++    }
++
++    public void flush() {
++        for (NettyNetworkManager manager : connections) {
++            manager.getChannel().flush();
++        }
++    }
++
++    private static class ConnectionManagementHandler implements ChannelHandler {
++
++        private final NettyBootstrap bootstrap;
++        private final NettyNetworkManager manager;
++
++        private ConnectionManagementHandler(NettyBootstrap bootstrap, NettyNetworkManager manager) {
++            this.bootstrap = bootstrap;
++            this.manager = manager;
++        }
++
++        @Override
++        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
++            this.bootstrap.connections.add(manager);
++        }
++
++        @Override
++        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
++            this.bootstrap.connections.remove(manager);
++        }
++
++        @Override
++        public void exceptionCaught(ChannelHandlerContext ctx, Throwable throwable) throws Exception {
++            // intentional no-op
++        }
 +    }
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NettyNetworkManager.java b/src/main/java/com/canyonmodded/network/NettyNetworkManager.java
@@ -210,10 +246,10 @@ index 00000000..fbb9433b
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java b/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java
 new file mode 100644
-index 00000000..26d86bca
+index 00000000..25d4811b
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java
-@@ -0,0 +1,62 @@
+@@ -0,0 +1,60 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.channel.Channel;
@@ -241,8 +277,6 @@ index 00000000..26d86bca
 +            } else if (h instanceof NetServerHandler) {
 +                ((NetServerHandler) h).a();
 +            }
-+
-+            networkManager.getChannel().flush();
 +        }, 0, 50, TimeUnit.MILLISECONDS);
 +    }
 +
@@ -390,7 +424,7 @@ index 00000000..17fdb418
 +    }
 +}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
-index e789839f..968b4fae 100644
+index e789839f..e9bf5db9 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
 +++ b/src/main/java/net/minecraft/server/MinecraftServer.java
 @@ -4,18 +4,16 @@ import java.awt.GraphicsEnvironment;
@@ -512,12 +546,13 @@ index e789839f..968b4fae 100644
          ((CraftScheduler) this.server.getScheduler()).mainThreadHeartbeat(this.ticks); // CraftBukkit
  
          for (j = 0; j < this.worlds.size(); ++j) { // CraftBukkit
-@@ -556,7 +597,7 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -556,7 +597,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
              }
          // } // CraftBukkit
  
 -        this.networkListenThread.a();
 +        if (this.networkListenThread != null) this.networkListenThread.a(); // Canyon
++        if (this.nettyBootstrap != null) this.nettyBootstrap.flush(); // Canyon
          this.serverConfigurationManager.b();
  
          // CraftBukkit start

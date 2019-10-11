@@ -1,15 +1,15 @@
-From 2ebc7935ff86cb94783e6f0368ebda768c73d587 Mon Sep 17 00:00:00 2001
+From 492e30bed2683465054fda558b7854f234d0cdb9 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Tue, 8 Oct 2019 19:56:55 -0400
-Subject: [PATCH] Always send queued chunk packets
+Subject: [PATCH] Send queued chunk packets at opportune times
 
 Fixes annoying post-login/teleport lag where you can get "stuck" in stone.
 
 diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
-index 2ba2a177..f5fae3e4 100644
+index 1632206e..551a36d0 100644
 --- a/src/main/java/net/minecraft/server/EntityPlayer.java
 +++ b/src/main/java/net/minecraft/server/EntityPlayer.java
-@@ -214,6 +214,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+@@ -215,6 +215,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
              }
          }
  
@@ -29,6 +29,17 @@ index dfa5b6d9..0a81ce3f 100644
              });
              // Canyon End
          }
+diff --git a/src/main/java/net/minecraft/server/ServerConfigurationManager.java b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
+index 2723a397..33f5833e 100644
+--- a/src/main/java/net/minecraft/server/ServerConfigurationManager.java
++++ b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
+@@ -648,5 +648,6 @@ public class ServerConfigurationManager {
+     public void updateClient(EntityPlayer entityplayer) {
+         entityplayer.updateInventory(entityplayer.defaultContainer);
+         entityplayer.C();
++        server.queueTask(() -> entityplayer.a(true)); // Canyon - update chunks on respawn
+     }
+ }
 -- 
 2.22.0
 
