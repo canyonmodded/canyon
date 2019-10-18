@@ -1,0 +1,74 @@
+From 399e0e35f150884cb25c03f44eeab4b44a5df875 Mon Sep 17 00:00:00 2001
+From: Andrew Steinborn <git@steinborn.me>
+Date: Sun, 6 Oct 2019 01:39:11 -0400
+Subject: [PATCH] Attempt to reduce sync chunk loads
+
+
+diff --git a/src/main/java/net/minecraft/server/BlockGrass.java b/src/main/java/net/minecraft/server/BlockGrass.java
+index 803067f7..b16f9a4b 100644
+--- a/src/main/java/net/minecraft/server/BlockGrass.java
++++ b/src/main/java/net/minecraft/server/BlockGrass.java
+@@ -22,6 +22,7 @@ public class BlockGrass extends Block {
+                 int l = i + random.nextInt(3) - 1;
+                 int i1 = j + random.nextInt(5) - 3;
+                 int j1 = k + random.nextInt(3) - 1;
++                if (!world.chunkProvider.isChunkLoaded(l >> 4, j1 >> 4)) return; // Canyon - reduce sync chunk loads
+                 int k1 = world.getTypeId(l, i1 + 1, j1);
+ 
+                 if (world.getTypeId(l, i1, j1) == Block.DIRT.id && world.getLightLevel(l, i1 + 1, j1) >= 4 && Block.q[k1] <= 2) {
+diff --git a/src/main/java/net/minecraft/server/SpawnerCreature.java b/src/main/java/net/minecraft/server/SpawnerCreature.java
+index fda0a090..bceca47d 100644
+--- a/src/main/java/net/minecraft/server/SpawnerCreature.java
++++ b/src/main/java/net/minecraft/server/SpawnerCreature.java
+@@ -37,10 +37,11 @@ public final class SpawnerCreature {
+                 int k = MathHelper.floor(entityhuman.locX / 16.0D);
+ 
+                 j = MathHelper.floor(entityhuman.locZ / 16.0D);
+-                byte b0 = 8;
++                byte b0 = (byte) world.getServer().getViewDistance(); // Canyon - only consider view distance
+ 
+                 for (int l = -b0; l <= b0; ++l) {
+                     for (int i1 = -b0; i1 <= b0; ++i1) {
++                        if (!world.chunkProvider.isChunkLoaded(l + k, i1 + j)) continue; // Canyon - do not try to spawn mobs in unloaded chunks, causes sync loads
+                         b.add(new ChunkCoordIntPair(l + k, i1 + j));
+                     }
+                 }
+@@ -93,6 +94,7 @@ public final class SpawnerCreature {
+                             int j2 = chunkposition.y;
+                             int k2 = chunkposition.z;
+ 
++                            if (!world.chunkProvider.isChunkLoaded(i2 >> 4, k2 >> 4)) continue; // Canyon - do not try to spawn mobs in unloaded chunks, causes sync loads
+                             if (!world.e(i2, j2, k2) && world.getMaterial(i2, j2, k2) == enumcreaturetype.c()) {
+                                 int l2 = 0;
+ 
+@@ -155,6 +157,7 @@ public final class SpawnerCreature {
+     }
+ 
+     private static boolean a(EnumCreatureType enumcreaturetype, World world, int i, int j, int k) {
++        if (!world.chunkProvider.isChunkLoaded(i >> 4, k >> 4)) return false; // Canyon - do not try to spawn mobs in unloaded chunks, causes sync loads
+         return enumcreaturetype.c() == Material.WATER ? world.getMaterial(i, j, k).isLiquid() && !world.e(i, j + 1, k) : world.e(i, j - 1, k) && !world.e(i, j, k) && !world.getMaterial(i, j, k).isLiquid() && !world.e(i, j + 1, k);
+     }
+ 
+diff --git a/src/main/java/net/minecraft/server/World.java b/src/main/java/net/minecraft/server/World.java
+index 1d4ad166..ddbc9700 100644
+--- a/src/main/java/net/minecraft/server/World.java
++++ b/src/main/java/net/minecraft/server/World.java
+@@ -462,6 +462,7 @@ public class World implements IBlockAccess {
+     }
+ 
+     public boolean isChunkLoaded(int i, int j, int k) {
++        if (!this.isChunkLoaded(i >> 4, k >> 4)) return false; // Canyon - make sure this doesn't load chunks
+         return this.getChunkAt(i >> 4, k >> 4).c(i & 15, j, k & 15);
+     }
+ 
+@@ -1864,6 +1865,7 @@ public class World implements IBlockAccess {
+ 
+             for (k = -b0; k <= b0; ++k) {
+                 for (l = -b0; l <= b0; ++l) {
++                    if (!this.isChunkLoaded(k + i, l + j)) continue; // Canyon - do not try to tick unloaded chunks
+                     this.P.add(new ChunkCoordIntPair(k + i, l + j));
+                 }
+             }
+-- 
+2.22.0
+

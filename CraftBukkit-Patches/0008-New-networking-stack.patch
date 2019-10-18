@@ -1,4 +1,4 @@
-From e245744639a0df8633e5d350109969a78bec07fb Mon Sep 17 00:00:00 2001
+From 2a7db1ffe558e4b50d46324f89761d882456c434 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -40,10 +40,10 @@ index 00000000..d645e7c9
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NettyBootstrap.java b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
 new file mode 100644
-index 00000000..a8688f9c
+index 00000000..0e58eeff
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
-@@ -0,0 +1,99 @@
+@@ -0,0 +1,137 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.bootstrap.ServerBootstrap;
@@ -62,6 +62,8 @@ index 00000000..a8688f9c
 +import net.minecraft.server.NetLoginHandler;
 +
 +import java.net.InetAddress;
++import java.util.List;
++import java.util.concurrent.CopyOnWriteArrayList;
 +
 +public class NettyBootstrap {
 +    private Channel bound;
@@ -70,6 +72,7 @@ index 00000000..a8688f9c
 +    private final InetAddress bind;
 +    private final int port;
 +    private final MinecraftServer server;
++    private final List<NettyNetworkManager> connections = new CopyOnWriteArrayList<>();
 +
 +    public NettyBootstrap(InetAddress bind, int port, MinecraftServer server) {
 +        this.server = server;
@@ -118,8 +121,11 @@ index 00000000..a8688f9c
 +                .childHandler(new ChannelInitializer<Channel>() {
 +                    @Override
 +                    protected void initChannel(Channel channel) throws Exception {
++                        channel.config().setOption(ChannelOption.IP_TOS, 24);
++
 +                        NetLoginHandler handler = new NetLoginHandler(server, channel);
 +                        channel.pipeline()
++                                .addLast("connection-manager", new ConnectionManagementHandler(NettyBootstrap.this, (NettyNetworkManager) handler.networkManager))
 +                                .addLast("read-timeout", new ReadTimeoutHandler(30))
 +                                .addLast("packet-decoder", new PacketDecoder())
 +                                .addLast("packet-encoder", new PacketEncoder())
@@ -142,13 +148,45 @@ index 00000000..a8688f9c
 +        this.worker.shutdownGracefully();
 +        this.boss.shutdownGracefully();
 +    }
++
++    public void flush() {
++        for (NettyNetworkManager manager : connections) {
++            manager.getChannel().flush();
++        }
++    }
++
++    private static class ConnectionManagementHandler implements ChannelHandler {
++
++        private final NettyBootstrap bootstrap;
++        private final NettyNetworkManager manager;
++
++        private ConnectionManagementHandler(NettyBootstrap bootstrap, NettyNetworkManager manager) {
++            this.bootstrap = bootstrap;
++            this.manager = manager;
++        }
++
++        @Override
++        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
++            this.bootstrap.connections.add(manager);
++        }
++
++        @Override
++        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
++            this.bootstrap.connections.remove(manager);
++        }
++
++        @Override
++        public void exceptionCaught(ChannelHandlerContext ctx, Throwable throwable) throws Exception {
++            // intentional no-op
++        }
++    }
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NettyNetworkManager.java b/src/main/java/com/canyonmodded/network/NettyNetworkManager.java
 new file mode 100644
-index 00000000..2b9a5a41
+index 00000000..fbb9433b
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NettyNetworkManager.java
-@@ -0,0 +1,49 @@
+@@ -0,0 +1,57 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.channel.Channel;
@@ -190,7 +228,15 @@ index 00000000..2b9a5a41
 +
 +    @Override
 +    public void queue(Packet packet) {
-+        this.channel.writeAndFlush(packet, this.channel.voidPromise());
++        this.channel.write(packet, this.channel.voidPromise());
++        if (isUrgentPacket(packet)) {
++            this.channel.flush();
++        }
++    }
++
++    private boolean isUrgentPacket(Packet packet) {
++        return packet instanceof Packet2Handshake || packet instanceof Packet1Login || packet instanceof Packet0KeepAlive
++                || packet instanceof Packet255KickDisconnect;
 +    }
 +
 +    @Override
@@ -266,7 +312,7 @@ index 00000000..25d4811b
 +}
 diff --git a/src/main/java/com/canyonmodded/network/PacketDecoder.java b/src/main/java/com/canyonmodded/network/PacketDecoder.java
 new file mode 100644
-index 00000000..e71f83d0
+index 00000000..6d23f8ae
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/PacketDecoder.java
 @@ -0,0 +1,32 @@
@@ -291,14 +337,14 @@ index 00000000..e71f83d0
 +            return;
 +        }
 +
-+        int ri = buf.readerIndex();
-+        DataInputStream stream = new DataInputStream(new ByteBufInputStream(buf));
++        ByteBuf packetBuf = buf.slice();
++        DataInputStream stream = new DataInputStream(new ByteBufInputStream(packetBuf));
 +        try {
 +            Packet packet = Packet.a(stream, true, true);
 +            list.add(packet);
++            buf.skipBytes(packetBuf.readerIndex());
 +        } catch (EOFException e) {
-+            // We have to hold back for now and queue more data
-+            buf.readerIndex(ri);
++            // We have to hold back for now and queue more data. The ByteToMessageDecoder will handle this for us.
 +        }
 +    }
 +}
@@ -378,7 +424,7 @@ index 00000000..17fdb418
 +    }
 +}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
-index e789839f..968b4fae 100644
+index e789839f..e9bf5db9 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
 +++ b/src/main/java/net/minecraft/server/MinecraftServer.java
 @@ -4,18 +4,16 @@ import java.awt.GraphicsEnvironment;
@@ -500,12 +546,13 @@ index e789839f..968b4fae 100644
          ((CraftScheduler) this.server.getScheduler()).mainThreadHeartbeat(this.ticks); // CraftBukkit
  
          for (j = 0; j < this.worlds.size(); ++j) { // CraftBukkit
-@@ -556,7 +597,7 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -556,7 +597,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
              }
          // } // CraftBukkit
  
 -        this.networkListenThread.a();
 +        if (this.networkListenThread != null) this.networkListenThread.a(); // Canyon
++        if (this.nettyBootstrap != null) this.nettyBootstrap.flush(); // Canyon
          this.serverConfigurationManager.b();
  
          // CraftBukkit start
@@ -601,7 +648,7 @@ index a8241311..68dcfca1 100644
              ChunkCompressionThread.sendPacket(this.player, packet);
              packet = null;
 diff --git a/src/main/java/net/minecraft/server/NetworkManager.java b/src/main/java/net/minecraft/server/NetworkManager.java
-index 11cf7db8..00cc5ab7 100644
+index 11cf7db8..85618930 100644
 --- a/src/main/java/net/minecraft/server/NetworkManager.java
 +++ b/src/main/java/net/minecraft/server/NetworkManager.java
 @@ -24,7 +24,7 @@ public class NetworkManager {
@@ -627,18 +674,17 @@ index 11cf7db8..00cc5ab7 100644
      public NetworkManager(Socket socket, String s, NetHandler nethandler) {
          this.socket = socket;
          this.i = socket.getRemoteSocketAddress();
-@@ -169,8 +176,8 @@ public class NetworkManager {
+@@ -169,8 +176,7 @@ public class NetworkManager {
          }
      }
  
 -    private void a(Exception exception) {
 -        exception.printStackTrace();
 +    public void a(Throwable exception) { // Canyon - private -> public, Exception -> Throwable
-+        //exception.printStackTrace(); // Canyon - suppress spam
          this.a("disconnect.genericReason", new Object[] { "Internal exception: " + exception.toString()});
      }
  
-@@ -179,6 +186,12 @@ public class NetworkManager {
+@@ -179,6 +185,12 @@ public class NetworkManager {
              this.t = true;
              this.u = s;
              this.v = aobject;
