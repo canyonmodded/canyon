@@ -1,4 +1,4 @@
-From 08a2f4462934665278e5f036bfd2ae8bc880ac32 Mon Sep 17 00:00:00 2001
+From 4ae36182d9f100ed1a647cd40f72ce3a416cfdbd Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 5 Oct 2019 03:08:44 -0400
 Subject: [PATCH] Introduce Async Chunk I/O
@@ -323,7 +323,7 @@ index 3c7706d5..d32d70db 100644
  
      public void a(EntityPlayer entityplayer) {
 diff --git a/src/main/java/net/minecraft/server/ServerConfigurationManager.java b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
-index 981f058a..2723a397 100644
+index 981f058a..30d058a0 100644
 --- a/src/main/java/net/minecraft/server/ServerConfigurationManager.java
 +++ b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
 @@ -89,7 +89,7 @@ public class ServerConfigurationManager {
@@ -344,7 +344,7 @@ index 981f058a..2723a397 100644
  
          while (worldserver.getEntities(entityplayer, entityplayer.boundingBox).size() != 0) {
              entityplayer.setPosition(entityplayer.locX, entityplayer.locY + 1.0D, entityplayer.locZ);
-@@ -249,26 +249,38 @@ public class ServerConfigurationManager {
+@@ -249,26 +249,44 @@ public class ServerConfigurationManager {
          entityplayer1.setLocation(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
          // CraftBukkit end
  
@@ -385,6 +385,12 @@ index 981f058a..2723a397 100644
          this.updateClient(entityplayer1); // CraftBukkit
 +        entityplayer1.isRespawning = false; // Canyon
          entityplayer1.x();
++        // Canyon start - resync entity tracker
++        this.server.queueTask(() -> {
++            worldserver.tracker.untrackPlayer(entityplayer);
++            worldserver.tracker.track(entityplayer);
++        });
++        // Canyon end
 +        });
 +        // Canyon end
          return entityplayer1;

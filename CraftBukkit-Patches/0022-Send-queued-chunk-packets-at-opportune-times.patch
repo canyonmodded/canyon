@@ -1,4 +1,4 @@
-From 492e30bed2683465054fda558b7854f234d0cdb9 Mon Sep 17 00:00:00 2001
+From 796cc71e9a799a002f422560e0ce2d014eb7467c Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Tue, 8 Oct 2019 19:56:55 -0400
 Subject: [PATCH] Send queued chunk packets at opportune times
@@ -6,10 +6,18 @@ Subject: [PATCH] Send queued chunk packets at opportune times
 Fixes annoying post-login/teleport lag where you can get "stuck" in stone.
 
 diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
-index 1632206e..551a36d0 100644
+index 1632206e..a228993d 100644
 --- a/src/main/java/net/minecraft/server/EntityPlayer.java
 +++ b/src/main/java/net/minecraft/server/EntityPlayer.java
-@@ -215,6 +215,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+@@ -112,6 +112,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+ 
+     public void m_() {
+         if (isRespawning) return; // Canyon
++        this.a(true); // Canyon
+         this.itemInWorldManager.a();
+         --this.bM;
+         this.activeContainer.a();
+@@ -215,6 +216,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
              }
          }
  
@@ -30,10 +38,10 @@ index dfa5b6d9..0a81ce3f 100644
              // Canyon End
          }
 diff --git a/src/main/java/net/minecraft/server/ServerConfigurationManager.java b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
-index 2723a397..33f5833e 100644
+index 30d058a0..b9c75f0a 100644
 --- a/src/main/java/net/minecraft/server/ServerConfigurationManager.java
 +++ b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
-@@ -648,5 +648,6 @@ public class ServerConfigurationManager {
+@@ -654,5 +654,6 @@ public class ServerConfigurationManager {
      public void updateClient(EntityPlayer entityplayer) {
          entityplayer.updateInventory(entityplayer.defaultContainer);
          entityplayer.C();
