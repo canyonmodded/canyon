@@ -1,11 +1,11 @@
-From 70cc3a4e8b3e67ffd64b5394d1d539cb6cdf8b4a Mon Sep 17 00:00:00 2001
+From 48736e6500297b374c74295d0f3bd5a0da926477 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Wed, 21 Aug 2019 23:46:10 -0400
 Subject: [PATCH] Rebrand to Canyon
 
 
 diff --git a/pom.xml b/pom.xml
-index 6b94dd16..30915c6a 100644
+index 6b94dd16..033f5b07 100644
 --- a/pom.xml
 +++ b/pom.xml
 @@ -1,11 +1,16 @@
@@ -29,7 +29,7 @@ index 6b94dd16..30915c6a 100644
    <url>http://www.bukkit.org</url>
    <properties>
      <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-@@ -19,7 +24,7 @@
+@@ -19,20 +24,20 @@
    <repositories>
      <repository>
        <id>bukkit-repo</id>
@@ -38,7 +38,11 @@ index 6b94dd16..30915c6a 100644
      </repository>
    </repositories>
    <pluginRepositories>
-@@ -30,9 +35,9 @@
+     <pluginRepository>
+       <id>bukkit-plugins</id>
+-      <url>http://repo.bukkit.org/artifactory/plugins-release</url>
++      <url>https://hub.spigotmc.org/nexus/content/repositories/central/</url> <!-- Canyon: replace repo -->
+     </pluginRepository>
    </pluginRepositories>
    <dependencies>
      <dependency>
@@ -149,5 +153,5 @@ index e5c92b7f..e7e3ccf7 100644
      private final String protocolVersion = "1.7.3";
      private final ServicesManager servicesManager = new SimpleServicesManager();
 -- 
-2.22.0.windows.1
+2.24.0
 
