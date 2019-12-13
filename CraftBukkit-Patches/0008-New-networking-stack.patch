@@ -1,4 +1,4 @@
-From 2a7db1ffe558e4b50d46324f89761d882456c434 Mon Sep 17 00:00:00 2001
+From b5b7cbf17eae72d46cc038fe63f1795436f55910 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -350,10 +350,10 @@ index 00000000..6d23f8ae
 +}
 diff --git a/src/main/java/com/canyonmodded/network/PacketEncoder.java b/src/main/java/com/canyonmodded/network/PacketEncoder.java
 new file mode 100644
-index 00000000..17fdb418
+index 00000000..5317f40d
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/PacketEncoder.java
-@@ -0,0 +1,69 @@
+@@ -0,0 +1,39 @@
 +package com.canyonmodded.network;
 +
 +import io.netty.buffer.ByteBuf;
@@ -382,45 +382,15 @@ index 00000000..17fdb418
 +    }
 +
 +    private void handleCompressingMapChunk(Packet51MapChunk packet, DataOutputStream out) throws Exception {
-+        RecyclableByteArrayOutputStream compressed = RecyclableByteArrayOutputStream.newInstance();
++        ByteArrayOutputStream compressed = new ByteArrayOutputStream();
 +        try (DeflaterOutputStream dos = new DeflaterOutputStream(compressed)) {
 +            dos.write(packet.rawData);
 +        }
-+        packet.g = compressed.getInternalBuffer();
++        packet.g = compressed.toByteArray();
 +        packet.h = compressed.size();
 +        packet.k = true;
 +
 +        Packet.a(packet, out);
-+        compressed.recycle();
-+    }
-+
-+    private static class RecyclableByteArrayOutputStream extends ByteArrayOutputStream {
-+        private static final Recycler<RecyclableByteArrayOutputStream> RECYCLER = new Recycler<RecyclableByteArrayOutputStream>() {
-+            @Override
-+            protected RecyclableByteArrayOutputStream newObject(Handle<RecyclableByteArrayOutputStream> handle) {
-+                return new RecyclableByteArrayOutputStream(handle);
-+            }
-+        };
-+
-+        private final Recycler.Handle<RecyclableByteArrayOutputStream> handle;
-+
-+        public static RecyclableByteArrayOutputStream newInstance() {
-+            return RECYCLER.get();
-+        }
-+
-+        private RecyclableByteArrayOutputStream(Recycler.Handle<RecyclableByteArrayOutputStream> handle) {
-+            super(8192);
-+            this.handle = handle;
-+        }
-+
-+        public void recycle() {
-+            this.reset();
-+            handle.recycle(this);
-+        }
-+
-+        public byte[] getInternalBuffer() {
-+            return buf;
-+        }
 +    }
 +}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java

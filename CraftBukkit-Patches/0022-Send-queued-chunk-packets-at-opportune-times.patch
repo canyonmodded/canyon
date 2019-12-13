@@ -1,4 +1,4 @@
-From 796cc71e9a799a002f422560e0ce2d014eb7467c Mon Sep 17 00:00:00 2001
+From 63d68895e597d0660a1cf6144dccc09da69c5f7b Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Tue, 8 Oct 2019 19:56:55 -0400
 Subject: [PATCH] Send queued chunk packets at opportune times
@@ -6,7 +6,7 @@ Subject: [PATCH] Send queued chunk packets at opportune times
 Fixes annoying post-login/teleport lag where you can get "stuck" in stone.
 
 diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
-index 1632206e..a228993d 100644
+index 115745d4..6e23724c 100644
 --- a/src/main/java/net/minecraft/server/EntityPlayer.java
 +++ b/src/main/java/net/minecraft/server/EntityPlayer.java
 @@ -112,6 +112,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
@@ -23,8 +23,8 @@ index 1632206e..a228993d 100644
  
 +        flag = true; // Canyon - always send queued chunks
          if (flag && !this.chunkCoordIntPairQueue.isEmpty()) {
-             // Canyon start - new chunk sending logic for new networking stack
-             ChunkCoordIntPair chunkcoordintpair;
+             // Canyon start - rewrote logic and moved elsewhere
+             this.sendQueuedChunks();
 diff --git a/src/main/java/net/minecraft/server/NetLoginHandler.java b/src/main/java/net/minecraft/server/NetLoginHandler.java
 index dfa5b6d9..0a81ce3f 100644
 --- a/src/main/java/net/minecraft/server/NetLoginHandler.java
