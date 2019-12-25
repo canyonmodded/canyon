@@ -1,4 +1,4 @@
-From b5b7cbf17eae72d46cc038fe63f1795436f55910 Mon Sep 17 00:00:00 2001
+From 5fcaa7bdebb4f3dbb0bb9b5007df6a68b311f890 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -394,10 +394,10 @@ index 00000000..5317f40d
 +    }
 +}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
-index e789839f..e9bf5db9 100644
+index e789839f..0e8d830f 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
 +++ b/src/main/java/net/minecraft/server/MinecraftServer.java
-@@ -4,18 +4,16 @@ import java.awt.GraphicsEnvironment;
+@@ -4,18 +4,17 @@ import java.awt.GraphicsEnvironment;
  import java.io.File;
  import java.io.IOException;
  import java.net.InetAddress;
@@ -417,10 +417,11 @@ index e789839f..e9bf5db9 100644
  import java.net.UnknownHostException;
 +
 +import com.canyonmodded.network.NettyBootstrap;
++import io.netty.util.concurrent.FastThreadLocalThread;
  import jline.ConsoleReader;
  import joptsimple.OptionSet;
  import org.bukkit.World.Environment;
-@@ -37,6 +35,7 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -37,6 +36,7 @@ public class MinecraftServer implements Runnable, ICommandListener {
      public static Logger log = Logger.getLogger("Minecraft");
      public static HashMap trackerList = new HashMap();
      public NetworkListenThread networkListenThread;
@@ -428,7 +429,7 @@ index e789839f..e9bf5db9 100644
      public PropertyManager propertyManager;
      // public WorldServer[] worldServer; // CraftBukkit - removed!
      public ServerConfigurationManager serverConfigurationManager;
-@@ -119,6 +118,10 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -119,6 +119,10 @@ public class MinecraftServer implements Runnable, ICommandListener {
      private static final java.math.BigDecimal TPS_BASE = new java.math.BigDecimal(1E9).multiply(new java.math.BigDecimal(SAMPLE_INTERVAL));
      // Canyon end
  
@@ -439,7 +440,7 @@ index e789839f..e9bf5db9 100644
      public MinecraftServer(OptionSet options) { // CraftBukkit - adds argument OptionSet
          new ThreadSleepForever(this);
  
-@@ -168,7 +171,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -168,7 +172,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
  
          int i = this.propertyManager.getInt("server-port", 25565);
  
@@ -449,7 +450,7 @@ index e789839f..e9bf5db9 100644
  
          try {
              this.networkListenThread = new NetworkListenThread(this, inetaddress, i);
-@@ -177,7 +181,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -177,7 +182,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
              log.log(Level.WARNING, "The exception was: " + ioexception.toString());
              log.warning("Perhaps a server is already running on that port?");
              return false;
@@ -459,7 +460,7 @@ index e789839f..e9bf5db9 100644
  
          // Canyon start - note on online/offline mode
          if (!this.onlineMode) {
-@@ -192,6 +197,24 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -192,6 +198,24 @@ public class MinecraftServer implements Runnable, ICommandListener {
          // Canyon end
  
          this.serverConfigurationManager = new ServerConfigurationManager(this);
@@ -484,7 +485,7 @@ index e789839f..e9bf5db9 100644
          // CraftBukkit - removed trackers
          long j = System.nanoTime();
          String s1 = this.propertyManager.getString("level-name", "world");
-@@ -506,6 +529,12 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -506,6 +530,12 @@ public class MinecraftServer implements Runnable, ICommandListener {
          }
      }
  
@@ -497,7 +498,7 @@ index e789839f..e9bf5db9 100644
      private void h() {
          ArrayList arraylist = new ArrayList();
          Iterator iterator = trackerList.keySet().iterator();
-@@ -531,6 +560,18 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -531,6 +561,18 @@ public class MinecraftServer implements Runnable, ICommandListener {
          Vec3D.a();
          ++this.ticks;
  
@@ -516,7 +517,7 @@ index e789839f..e9bf5db9 100644
          ((CraftScheduler) this.server.getScheduler()).mainThreadHeartbeat(this.ticks); // CraftBukkit
  
          for (j = 0; j < this.worlds.size(); ++j) { // CraftBukkit
-@@ -556,7 +597,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -556,7 +598,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
              }
          // } // CraftBukkit
  
@@ -526,6 +527,15 @@ index e789839f..e9bf5db9 100644
          this.serverConfigurationManager.b();
  
          // CraftBukkit start
+@@ -607,7 +650,7 @@ public class MinecraftServer implements Runnable, ICommandListener {
+ 
+             // CraftBukkit - remove gui
+ 
+-            (new ThreadServerApplication("Server thread", minecraftserver)).start();
++            (new FastThreadLocalThread(null, minecraftserver, "Server thread")).start(); // Canyon - use fast thread local
+         } catch (Exception exception) {
+             log.log(Level.SEVERE, "Failed to start the minecraft server", exception);
+         }
 diff --git a/src/main/java/net/minecraft/server/NetLoginHandler.java b/src/main/java/net/minecraft/server/NetLoginHandler.java
 index 99e775b8..21347010 100644
 --- a/src/main/java/net/minecraft/server/NetLoginHandler.java
@@ -720,18 +730,6 @@ index d9ff03f4..310d022e 100644
                  this.server.getPluginManager().callEvent(event);
  
                  if (event.getResult() != PlayerPreLoginEvent.Result.ALLOWED) {
-diff --git a/src/main/java/net/minecraft/server/ThreadServerApplication.java b/src/main/java/net/minecraft/server/ThreadServerApplication.java
-index 4e49faee..3f8a9183 100644
---- a/src/main/java/net/minecraft/server/ThreadServerApplication.java
-+++ b/src/main/java/net/minecraft/server/ThreadServerApplication.java
-@@ -1,6 +1,6 @@
- package net.minecraft.server;
- 
--public final class ThreadServerApplication extends Thread {
-+public final class ThreadServerApplication extends io.netty.util.concurrent.FastThreadLocalThread { // Canyon
- 
-     final MinecraftServer a;
- 
 -- 
-2.22.0
+2.24.1
 

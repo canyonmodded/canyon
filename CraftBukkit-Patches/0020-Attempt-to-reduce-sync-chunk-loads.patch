@@ -1,4 +1,4 @@
-From aaedcd4a53b0021d76ad71bed91fea248b328e23 Mon Sep 17 00:00:00 2001
+From d69d640bdfa304bb93dc2fd3ef38b7c784195df9 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sun, 6 Oct 2019 01:39:11 -0400
 Subject: [PATCH] Attempt to reduce sync chunk loads
@@ -16,43 +16,6 @@ index 803067f7..b16f9a4b 100644
                  int k1 = world.getTypeId(l, i1 + 1, j1);
  
                  if (world.getTypeId(l, i1, j1) == Block.DIRT.id && world.getLightLevel(l, i1 + 1, j1) >= 4 && Block.q[k1] <= 2) {
-diff --git a/src/main/java/net/minecraft/server/SpawnerCreature.java b/src/main/java/net/minecraft/server/SpawnerCreature.java
-index fda0a090..4d2bfe1f 100644
---- a/src/main/java/net/minecraft/server/SpawnerCreature.java
-+++ b/src/main/java/net/minecraft/server/SpawnerCreature.java
-@@ -37,10 +37,11 @@ public final class SpawnerCreature {
-                 int k = MathHelper.floor(entityhuman.locX / 16.0D);
- 
-                 j = MathHelper.floor(entityhuman.locZ / 16.0D);
--                byte b0 = 8;
-+                byte b0 = (byte) world.getServer().getViewDistance(); // Canyon - only consider view distance
- 
-                 for (int l = -b0; l <= b0; ++l) {
-                     for (int i1 = -b0; i1 <= b0; ++i1) {
-+                        if (!world.chunkProvider.isChunkLoaded(l + k, i1 + j)) continue; // Canyon - do not try to spawn mobs in unloaded chunks, causes sync loads
-                         b.add(new ChunkCoordIntPair(l + k, i1 + j));
-                     }
-                 }
-diff --git a/src/main/java/net/minecraft/server/World.java b/src/main/java/net/minecraft/server/World.java
-index 1d4ad166..ddbc9700 100644
---- a/src/main/java/net/minecraft/server/World.java
-+++ b/src/main/java/net/minecraft/server/World.java
-@@ -462,6 +462,7 @@ public class World implements IBlockAccess {
-     }
- 
-     public boolean isChunkLoaded(int i, int j, int k) {
-+        if (!this.isChunkLoaded(i >> 4, k >> 4)) return false; // Canyon - make sure this doesn't load chunks
-         return this.getChunkAt(i >> 4, k >> 4).c(i & 15, j, k & 15);
-     }
- 
-@@ -1864,6 +1865,7 @@ public class World implements IBlockAccess {
- 
-             for (k = -b0; k <= b0; ++k) {
-                 for (l = -b0; l <= b0; ++l) {
-+                    if (!this.isChunkLoaded(k + i, l + j)) continue; // Canyon - do not try to tick unloaded chunks
-                     this.P.add(new ChunkCoordIntPair(k + i, l + j));
-                 }
-             }
 -- 
 2.24.1
 

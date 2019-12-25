@@ -1,4 +1,4 @@
-From 748ee8d70f475f7fd734e0cefb6cea929fd99acf Mon Sep 17 00:00:00 2001
+From 132d9051674a6ba53cf6eaeff8c2ff7fc7370d4e Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Fri, 23 Aug 2019 16:02:34 -0400
 Subject: [PATCH] Bukkit scheduler rewrite
@@ -320,18 +320,18 @@ index 00000000..6a753fd4
 +    }
 +}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
-index 968b4fae..3850cfe5 100644
+index 0e8d830f..380a3374 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
 +++ b/src/main/java/net/minecraft/server/MinecraftServer.java
-@@ -14,6 +14,7 @@ import java.io.PrintStream;
- import java.net.UnknownHostException;
+@@ -15,6 +15,7 @@ import java.net.UnknownHostException;
  
  import com.canyonmodded.network.NettyBootstrap;
+ import io.netty.util.concurrent.FastThreadLocalThread;
 +import com.canyonmodded.scheduler.CanyonScheduler;
  import jline.ConsoleReader;
  import joptsimple.OptionSet;
  import org.bukkit.World.Environment;
-@@ -572,7 +573,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -573,7 +574,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
          }
          // Canyon end
  
@@ -363,5 +363,5 @@ index 190d4fd9..0aea8b93 100644
      private final PluginManager pluginManager = new SimplePluginManager(this, commandMap);
      protected final MinecraftServer console;
 -- 
-2.22.0
+2.24.1
 
