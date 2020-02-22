@@ -4,18 +4,12 @@ Canyon is a fork of CraftBukkit for Minecraft Beta 1.7.3. It includes multiple
 enhancements whilst also retaining compatibility with old Bukkit plugins and
 mods as much as possible.
 
-## Legality
+## Building
 
-Canyon is simply a set of patches applied on top of existing CraftBukkit source.
-In order to build Canyon, you will need to find a proper copy of the _relocated_
-Minecraft Beta 1.7.3 JAR used by CraftBukkit (not merely a 1.7.3 beta server JAR).
-This is the same approach taken by the Spigot project.
-
-Provided you have this dependency, you'll be able to apply the patches in this
-repository and compile Canyon using Maven.
-
-It is my intention to provide fully free CraftBukkit-compatible mappings, but this
-project will take time.
+1. Clone the repo with `git clone --recursive https://github.com/canyonmodded/canyon.git`.
+2. Go into the new `canyon` directory and run `./canyon p`.
+3. Run `mvn clean package`.
+4. Find the server JAR in `Canyon-Server/target`.
 
 ## Differences from CraftBukkit
 
