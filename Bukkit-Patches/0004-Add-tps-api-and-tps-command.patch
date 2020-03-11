@@ -63,24 +63,6 @@ diff --git a/src/main/java/org/bukkit/Server.java b/src/main/java/org/bukkit/Ser
 index 1ef6cfa7..0ad93193 100644
 --- a/src/main/java/org/bukkit/Server.java
 +++ b/src/main/java/org/bukkit/Server.java
-@@ -290,7 +290,7 @@ public interface Server {
-      * @return World with the given Unique ID, or null if none exists.
-      */
-     public World getWorld(UUID uid);
--    
-+
-     /**
-      * Gets the map from the given item ID.
-      * 
-@@ -298,7 +298,7 @@ public interface Server {
-      * @return The MapView if it exists, or null otherwise.
-      */
-     public MapView getMap(short id);
--    
-+
-     /**
-      * Create a new map with an automatically assigned ID.
-      * 
 @@ -441,4 +441,13 @@ public interface Server {
       * @return Set containing banned players
       */
