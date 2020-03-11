@@ -1,16 +1,16 @@
-From 603a9aa325208f7b3630a143f8ba84a636353bcb Mon Sep 17 00:00:00 2001
+From 212a71939e3033ecd972ba1be33bb2e21f3f74fd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jakub=20Staro=C5=84?= <kubastaron@hotmail.com>
 Date: Wed, 11 Mar 2020 18:08:34 +0100
 Subject: [PATCH] Add tps api and /tps command
 
 
-diff --git a/src/main/java/canyonmodded/command/TpsCommand.java b/src/main/java/canyonmodded/command/TpsCommand.java
+diff --git a/src/main/java/com/canyonmodded/command/TpsCommand.java b/src/main/java/com/canyonmodded/command/TpsCommand.java
 new file mode 100644
-index 00000000..c7bebdc6
+index 00000000..bd4d8a18
 --- /dev/null
-+++ b/src/main/java/canyonmodded/command/TpsCommand.java
++++ b/src/main/java/com/canyonmodded/command/TpsCommand.java
 @@ -0,0 +1,49 @@
-+package canyonmodded.command;
++package com.canyonmodded.command;
 +
 +import org.bukkit.ChatColor;
 +import org.bukkit.Server;
@@ -60,10 +60,10 @@ index 00000000..c7bebdc6
 +    }
 +}
 diff --git a/src/main/java/org/bukkit/Server.java b/src/main/java/org/bukkit/Server.java
-index 1ef6cfa7..521bb041 100644
+index 1ef6cfa7..0ad93193 100644
 --- a/src/main/java/org/bukkit/Server.java
 +++ b/src/main/java/org/bukkit/Server.java
-@@ -290,18 +290,18 @@ public interface Server {
+@@ -290,7 +290,7 @@ public interface Server {
       * @return World with the given Unique ID, or null if none exists.
       */
      public World getWorld(UUID uid);
@@ -71,9 +71,8 @@ index 1ef6cfa7..521bb041 100644
 +
      /**
       * Gets the map from the given item ID.
--     * 
-+     *
-      * @param id ID of the map to get.
+      * 
+@@ -298,7 +298,7 @@ public interface Server {
       * @return The MapView if it exists, or null otherwise.
       */
      public MapView getMap(short id);
@@ -81,11 +80,7 @@ index 1ef6cfa7..521bb041 100644
 +
      /**
       * Create a new map with an automatically assigned ID.
--     * 
-+     *
-      * @param world The world the map will belong to.
-      * @return The MapView just created.
-      */
+      * 
 @@ -441,4 +441,13 @@ public interface Server {
       * @return Set containing banned players
       */
@@ -101,13 +96,13 @@ index 1ef6cfa7..521bb041 100644
 +    // Canyon end
  }
 diff --git a/src/main/java/org/bukkit/command/SimpleCommandMap.java b/src/main/java/org/bukkit/command/SimpleCommandMap.java
-index 2abd87e5..e50099c8 100644
+index 2abd87e5..b3b32908 100644
 --- a/src/main/java/org/bukkit/command/SimpleCommandMap.java
 +++ b/src/main/java/org/bukkit/command/SimpleCommandMap.java
 @@ -1,5 +1,6 @@
  package org.bukkit.command;
  
-+import canyonmodded.command.TpsCommand;
++import com.canyonmodded.command.TpsCommand;
  import org.bukkit.command.defaults.*;
  import java.util.ArrayList;
  import java.util.HashMap;
