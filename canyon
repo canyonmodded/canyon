@@ -73,7 +73,7 @@ case "$1" in
         echo " Normal commands:"
         echo "  * rb, rebuild       | Rebuild patches, can be called from anywhere."
         echo "  * p, patch          | Apply all patches to the project without building it. Can be run from anywhere."
-        echo "  * j, jar            | Apply all patches and build the project, paperclip.jar will be output. Can be run from anywhere."
+        echo "  * j, jar            | Apply all patches and build the project, canyon-server.jar will be output. Can be run from anywhere."
     ;;
 esac
 
