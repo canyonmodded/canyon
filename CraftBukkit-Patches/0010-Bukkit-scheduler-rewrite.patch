@@ -1,4 +1,4 @@
-From 132d9051674a6ba53cf6eaeff8c2ff7fc7370d4e Mon Sep 17 00:00:00 2001
+From 2bd69ea06264e12f54a0e664f6cabe7d9d4d112f Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Fri, 23 Aug 2019 16:02:34 -0400
 Subject: [PATCH] Bukkit scheduler rewrite
@@ -342,18 +342,18 @@ index 0e8d830f..380a3374 100644
          for (j = 0; j < this.worlds.size(); ++j) { // CraftBukkit
              // if (j == 0 || this.propertyManager.getBoolean("allow-nether", true)) { // CraftBukkit
 diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-index 190d4fd9..0aea8b93 100644
+index 810778b9..c93162e9 100644
 --- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
 +++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-@@ -4,6 +4,7 @@ import java.io.FileNotFoundException;
+@@ -3,6 +3,7 @@ package org.bukkit.craftbukkit;
+ import java.io.FileNotFoundException;
  
- import com.canyonmodded.command.TpsCommand;
  import com.canyonmodded.config.CanyonConfig;
 +import com.canyonmodded.scheduler.CanyonScheduler;
  import org.bukkit.generator.ChunkGenerator;
  import com.avaje.ebean.config.DataSourceConfig;
  import com.avaje.ebean.config.ServerConfig;
-@@ -84,7 +85,7 @@ public final class CraftServer implements Server {
+@@ -83,7 +84,7 @@ public final class CraftServer implements Server {
      private final String serverVersion;
      private final String protocolVersion = "1.7.3";
      private final ServicesManager servicesManager = new SimpleServicesManager();
@@ -363,5 +363,5 @@ index 190d4fd9..0aea8b93 100644
      private final PluginManager pluginManager = new SimplePluginManager(this, commandMap);
      protected final MinecraftServer console;
 -- 
-2.24.1
+2.24.1.windows.2
 
