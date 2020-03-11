@@ -1,68 +1,13 @@
-From 98cbd050a74f2939476933df249851eda6143ffd Mon Sep 17 00:00:00 2001
+From 451806be069d1efd28d6f38e3e40c8f324d4a0a1 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 00:38:54 -0400
-Subject: [PATCH] Backport: Improve server tick loop and add /tps command
+Subject: [PATCH] Backport: Improve server tick loop and implement tps api
 
 This patch was backported from Paper 1.14.4 to Canyon and brings an
 important feature to help stamp out lag.
 
 The original author of the patch in Paper is Aikar.
 
-diff --git a/src/main/java/com/canyonmodded/command/TpsCommand.java b/src/main/java/com/canyonmodded/command/TpsCommand.java
-new file mode 100644
-index 00000000..716e89b6
---- /dev/null
-+++ b/src/main/java/com/canyonmodded/command/TpsCommand.java
-@@ -0,0 +1,49 @@
-+package com.canyonmodded.command;
-+
-+import net.minecraft.server.MinecraftServer;
-+import org.bukkit.ChatColor;
-+import org.bukkit.command.Command;
-+import org.bukkit.command.CommandSender;
-+
-+import java.text.DecimalFormat;
-+
-+public class TpsCommand extends Command {
-+    private final MinecraftServer server;
-+
-+    public TpsCommand(MinecraftServer server) {
-+        super("tps");
-+        this.server = server;
-+        this.description = "Obtains the current server TPS rate.";
-+    }
-+
-+    @Override
-+    public boolean execute(CommandSender sender, String label, String[] args) {
-+        String str = ChatColor.GOLD + "TPS over the last 1, 5, 15 minutes: ";
-+
-+        double avg1 = server.tps1.getAverage();
-+        double avg5 = server.tps5.getAverage();
-+        double avg15 = server.tps15.getAverage();
-+
-+        DecimalFormat fmt = new DecimalFormat("#.##");
-+
-+        str += colorTpsValue(avg1) + fmt.format(avg1) + ChatColor.GOLD + ", ";
-+        str += colorTpsValue(avg5) + fmt.format(avg5) + ChatColor.GOLD + ", ";
-+        str += colorTpsValue(avg15) + fmt.format(avg15);
-+
-+        sender.sendMessage(str);
-+        return true;
-+    }
-+
-+    private ChatColor colorTpsValue(double val) {
-+        if (Double.compare(val, 19.0d) >= 0) {
-+            // Excellent - Your server is performing well.
-+            return ChatColor.GREEN;
-+        } else if (Double.compare(val, 17.0d) >= 0) {
-+            // Fair - Your server is lagging somewhat
-+            return ChatColor.YELLOW;
-+        } else {
-+            // Unplayable
-+            return ChatColor.RED;
-+        }
-+    }
-+}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
 index 59358fbd..28178ba9 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
@@ -188,29 +133,30 @@ index 59358fbd..28178ba9 100644
                  while (this.isRunning) {
                      this.b();
 diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-index e7e3ccf7..3baeb821 100644
+index e7e3ccf7..b2123565 100644
 --- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
 +++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-@@ -1,6 +1,8 @@
+@@ -1,6 +1,7 @@
  package org.bukkit.craftbukkit;
  
  import java.io.FileNotFoundException;
 +
-+import com.canyonmodded.command.TpsCommand;
  import org.bukkit.generator.ChunkGenerator;
  import com.avaje.ebean.config.DataSourceConfig;
  import com.avaje.ebean.config.ServerConfig;
-@@ -97,6 +99,10 @@ public final class CraftServer implements Server {
+@@ -807,6 +808,12 @@ public final class CraftServer implements Server {
+         return result;
+     }
  
-         Bukkit.setServer(this);
- 
-+        // Canyon start - register tps command
-+        commandMap.register("canyon", new TpsCommand(console));
-+        // Canyon end
++    // Canyon start
++    public double[] getTPS() {
++        return new double[] { console.tps1.getAverage(), console.tps5.getAverage(), console.tps15.getAverage() };
++    }
++    // Canyon end
 +
-         configuration = new Configuration((File) console.options.valueOf("bukkit-settings"));
-         loadConfig();
-         loadPlugins();
+     public void setWhitelist(boolean value) {
+         server.o = value;
+         console.propertyManager.b("white-list", value);
 -- 
-2.22.0
+2.24.1.windows.2
 

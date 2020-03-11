@@ -1,4 +1,4 @@
-From 5e7f6f049b93a9dab76eb6f7526c55e908f20d98 Mon Sep 17 00:00:00 2001
+From c4b43e9f560626d937392a6b602f809c3336e422 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 20:20:02 -0400
 Subject: [PATCH] Configuration file
@@ -29,18 +29,18 @@ index 00000000..d7dffe62
 +    }
 +}
 diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-index 3baeb821..0836018c 100644
+index b2123565..4f1902fc 100644
 --- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
 +++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-@@ -3,6 +3,7 @@ package org.bukkit.craftbukkit;
+@@ -2,6 +2,7 @@ package org.bukkit.craftbukkit;
+ 
  import java.io.FileNotFoundException;
  
- import com.canyonmodded.command.TpsCommand;
 +import com.canyonmodded.config.CanyonConfig;
  import org.bukkit.generator.ChunkGenerator;
  import com.avaje.ebean.config.DataSourceConfig;
  import com.avaje.ebean.config.ServerConfig;
-@@ -130,6 +131,8 @@ public final class CraftServer implements Server {
+@@ -125,6 +126,8 @@ public final class CraftServer implements Server {
              configuration.setProperty("aliases.icanhasbukkit", icanhasbukkit);
          }
          configuration.save();
@@ -69,5 +69,5 @@ index 68b9abd2..394c6a97 100644
  
                  acceptsAll(asList("v", "version"), "Show the CraftBukkit Version");
 -- 
-2.22.0
+2.24.1.windows.2
 
