@@ -1,0 +1,366 @@
+From 0300843a40b065a4675e7ebd8eb232ec72f812ba Mon Sep 17 00:00:00 2001
+From: Johnanater <10360610+Johnanater@users.noreply.github.com>
+Date: Thu, 22 Aug 2019 20:33:36 -0400
+Subject: [PATCH] Restore online-mode functionality and backport players uuid's
+
+You will need a client patch in order to use online-mode.
+
+diff --git a/src/main/java/net/minecraft/server/Entity.java b/src/main/java/net/minecraft/server/Entity.java
+index 37dc9f8f..67d1051d 100644
+--- a/src/main/java/net/minecraft/server/Entity.java
++++ b/src/main/java/net/minecraft/server/Entity.java
+@@ -946,11 +946,13 @@ public abstract class Entity {
+         this.setPosition(this.locX, this.locY, this.locZ);
+ 
+         // CraftBukkit start
+-        long least = nbttagcompound.getLong("UUIDLeast");
+-        long most = nbttagcompound.getLong("UUIDMost");
++        if(!(this instanceof EntityPlayer)) { // Canyon
++            long least = nbttagcompound.getLong("UUIDLeast");
++            long most = nbttagcompound.getLong("UUIDMost");
+ 
+-        if (least != 0L && most != 0L) {
+-            this.uniqueId = new UUID(most, least);
++            if (least != 0L && most != 0L) {
++                this.uniqueId = new UUID(most, least);
++            }
+         }
+         // CraftBukkit end
+ 
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 28178ba9..cd041fd0 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -1,6 +1,5 @@
+ package net.minecraft.server;
+ 
+-import java.awt.GraphicsEnvironment;
+ import java.io.File;
+ import java.io.IOException;
+ import java.net.InetAddress;
+@@ -32,6 +31,12 @@ import org.bukkit.generator.ChunkGenerator;
+ import org.bukkit.plugin.PluginLoadOrder;
+ // CraftBukkit end
+ 
++// Canyon start
++import com.github.steveice10.mc.auth.service.AuthenticationService;
++import com.github.steveice10.mc.auth.service.ProfileService;
++import com.github.steveice10.mc.auth.service.SessionService;
++// Canyon end
++
+ public class MinecraftServer implements Runnable, ICommandListener {
+ 
+     public static Logger log = Logger.getLogger("Minecraft");
+@@ -119,6 +124,12 @@ public class MinecraftServer implements Runnable, ICommandListener {
+     private static final java.math.BigDecimal TPS_BASE = new java.math.BigDecimal(1E9).multiply(new java.math.BigDecimal(SAMPLE_INTERVAL));
+     // Canyon end
+ 
++    // Canyon start
++    public final AuthenticationService authenticationService;
++    public final SessionService sessionService;
++    public final ProfileService profileService;
++    // Canyon end
++
+     public MinecraftServer(OptionSet options) { // CraftBukkit - adds argument OptionSet
+         new ThreadSleepForever(this);
+ 
+@@ -131,6 +142,12 @@ public class MinecraftServer implements Runnable, ICommandListener {
+         }
+         Runtime.getRuntime().addShutdownHook(new ServerShutdownThread(this));
+         // CraftBukkit end
++
++        // Canyon start
++        authenticationService = new AuthenticationService();
++        sessionService = new SessionService();
++        profileService = new ProfileService();
++        // Canyon end
+     }
+ 
+     private boolean init() throws UnknownHostException { // CraftBukkit - added throws UnknownHostException
+@@ -179,12 +196,17 @@ public class MinecraftServer implements Runnable, ICommandListener {
+             return false;
+         }
+ 
++        // Canyon start - note on online/offline mode
+         if (!this.onlineMode) {
+             log.warning("**** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!");
+             log.warning("The server will make no attempt to authenticate usernames. Beware.");
+             log.warning("While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.");
+-            log.warning("To change this, set \"online-mode\" to \"true\" in the server.settings file.");
++            log.warning("To change this, set \"online-mode\" to \"true\" in the server.settings file. Note that a client mod is required for this to work.");
++        } else {
++            log.warning("**** SERVER IS RUNNING IN ONLINE MODE!");
++            log.warning("Clients who wish to connect to this server must be patched to use the correct session endpoint.");
+         }
++        // Canyon end
+ 
+         this.serverConfigurationManager = new ServerConfigurationManager(this);
+         // CraftBukkit - removed trackers
+diff --git a/src/main/java/net/minecraft/server/NetLoginHandler.java b/src/main/java/net/minecraft/server/NetLoginHandler.java
+index 99e775b8..0a2a6b90 100644
+--- a/src/main/java/net/minecraft/server/NetLoginHandler.java
++++ b/src/main/java/net/minecraft/server/NetLoginHandler.java
+@@ -1,5 +1,7 @@
+ package net.minecraft.server;
+ 
++import com.github.steveice10.mc.auth.data.GameProfile;
++
+ import java.net.Socket;
+ import java.util.Random;
+ import java.util.logging.Logger;
+@@ -15,6 +17,7 @@ public class NetLoginHandler extends NetHandler {
+     private String g = null;
+     private Packet1Login h = null;
+     private String i = "";
++    public GameProfile gameProfile = null; // Canyon
+ 
+     public NetLoginHandler(MinecraftServer minecraftserver, Socket socket, String s) {
+         this.server = minecraftserver;
+@@ -73,7 +76,7 @@ public class NetLoginHandler extends NetHandler {
+             if (!this.server.onlineMode) {
+                 this.b(packet1login);
+             } else {
+-                (new ThreadLoginVerifier(this, packet1login, this.server.server)).start(); // CraftBukkit
++                (new ThreadLoginVerifier(this, packet1login, this.server)).start(); // CraftBukkit
+             }
+         }
+     }
+diff --git a/src/main/java/net/minecraft/server/ServerConfigurationManager.java b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
+index 981f058a..8f25a50d 100644
+--- a/src/main/java/net/minecraft/server/ServerConfigurationManager.java
++++ b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
+@@ -5,11 +5,8 @@ import java.io.File;
+ import java.io.FileReader;
+ import java.io.FileWriter;
+ import java.io.PrintWriter;
+-import java.util.ArrayList;
+-import java.util.HashSet;
+-import java.util.Iterator;
+-import java.util.List;
+-import java.util.Set;
++import java.nio.charset.StandardCharsets;
++import java.util.*;
+ import java.util.logging.Logger;
+ 
+ // CraftBukkit start
+@@ -160,6 +157,7 @@ public class ServerConfigurationManager {
+         // in the event, check with plugins to see if it's ok, and THEN kick
+         // depending on the outcome. Also change any reference to this.e.c to entity.world
+         EntityPlayer entity = new EntityPlayer(this.server, this.server.getWorldServer(0), s, new ItemInWorldManager(this.server.getWorldServer(0)));
++        entity.uniqueId = netloginhandler.gameProfile != null ? netloginhandler.gameProfile.getId() : UUID.nameUUIDFromBytes(("OfflinePlayer:" + entity.name).getBytes(StandardCharsets.UTF_8)); // Canyon
+         Player player = (entity == null) ? null : (Player) entity.getBukkitEntity();
+         PlayerLoginEvent event = new PlayerLoginEvent(player);
+ 
+diff --git a/src/main/java/net/minecraft/server/ThreadLoginVerifier.java b/src/main/java/net/minecraft/server/ThreadLoginVerifier.java
+index 4d98e6ad..ffeba862 100644
+--- a/src/main/java/net/minecraft/server/ThreadLoginVerifier.java
++++ b/src/main/java/net/minecraft/server/ThreadLoginVerifier.java
+@@ -1,12 +1,6 @@
+ package net.minecraft.server;
+ 
+-import java.io.BufferedReader;
+-import java.io.InputStreamReader;
+-import java.net.URL;
+-import java.net.URLEncoder;
+-
+ // CraftBukkit start
+-import org.bukkit.craftbukkit.CraftServer;
+ import org.bukkit.event.player.PlayerPreLoginEvent;
+ // CraftBukkit end
+ 
+@@ -16,12 +10,12 @@ class ThreadLoginVerifier extends Thread {
+ 
+     final NetLoginHandler netLoginHandler;
+ 
+-    // CraftBukkit start
+-    CraftServer server;
++    // Canyon start
++    MinecraftServer server;
+ 
+-    ThreadLoginVerifier(NetLoginHandler netloginhandler, Packet1Login packet1login, CraftServer server) {
++    ThreadLoginVerifier(NetLoginHandler netloginhandler, Packet1Login packet1login, MinecraftServer server) {
+         this.server = server;
+-        // CraftBukkit end
++        // Canyon end
+ 
+         this.netLoginHandler = netloginhandler;
+         this.loginPacket = packet1login;
+@@ -30,19 +24,20 @@ class ThreadLoginVerifier extends Thread {
+     public void run() {
+         try {
+             String s = NetLoginHandler.a(this.netLoginHandler);
+-            URL url = new URL("http://www.minecraft.net/game/checkserver.jsp?user=" + URLEncoder.encode(this.loginPacket.name, "UTF-8") + "&serverId=" + URLEncoder.encode(s, "UTF-8"));
+-            BufferedReader bufferedreader = new BufferedReader(new InputStreamReader(url.openStream()));
+-            String s1 = bufferedreader.readLine();
++            // Canyon start - Fix online mode for server
++            this.netLoginHandler.gameProfile = server.sessionService.getProfileByServer(this.loginPacket.name, s);
++
++            if (this.netLoginHandler.gameProfile != null) {
++                // Canyon end
+ 
+-            bufferedreader.close();
+-            if (s1.equals("YES")) {
+                 // CraftBukkit start
+                 if (this.netLoginHandler.getSocket() == null) {
+                     return;
+                 }
+ 
+-                PlayerPreLoginEvent event = new PlayerPreLoginEvent(this.loginPacket.name, this.netLoginHandler.getSocket().getInetAddress());
+-                this.server.getPluginManager().callEvent(event);
++                PlayerPreLoginEvent event = new PlayerPreLoginEvent(this.loginPacket.name, this.netLoginHandler.getSocket().getInetAddress(), this.netLoginHandler.gameProfile.getId());
++                // Canyon end
++                this.server.server.getPluginManager().callEvent(event);
+ 
+                 if (event.getResult() != PlayerPreLoginEvent.Result.ALLOWED) {
+                     this.netLoginHandler.disconnect(event.getKickMessage());
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftOfflinePlayer.java b/src/main/java/org/bukkit/craftbukkit/CraftOfflinePlayer.java
+index 6e5c9c50..26fcff3a 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftOfflinePlayer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftOfflinePlayer.java
+@@ -1,24 +1,41 @@
+ package org.bukkit.craftbukkit;
+ 
++import com.github.steveice10.mc.auth.data.GameProfile;
+ import org.bukkit.OfflinePlayer;
+ import org.bukkit.Server;
+ 
++import java.util.UUID;
++
+ public class CraftOfflinePlayer implements OfflinePlayer {
+-    private final String name;
++    private final GameProfile gameProfile; // Canyon
+     private final CraftServer server;
+ 
++    // Canyon start
++    @Deprecated
+     protected CraftOfflinePlayer(CraftServer server, String name) {
++        this(server, new GameProfile((UUID) null, name));
++    }
++
++    protected CraftOfflinePlayer(CraftServer server, GameProfile gameProfile) {
+         this.server = server;
+-        this.name = name;
++        this.gameProfile = gameProfile;
+     }
++    // Canyon end
+ 
+     public boolean isOnline() {
+         return false;
+     }
+ 
+     public String getName() {
+-        return name;
++        return gameProfile.getName();
++    }
++
++    // Canyon start
++    @Override
++    public UUID getUniqueId() {
++        return gameProfile.getId();
+     }
++    // Canyon end
+ 
+     public Server getServer() {
+         return server;
+@@ -39,26 +56,26 @@ public class CraftOfflinePlayer implements OfflinePlayer {
+     }
+ 
+     public boolean isBanned() {
+-        return server.getHandle().banByName.contains(name.toLowerCase());
++        return server.getHandle().banByName.contains(getName().toLowerCase()); // Canyon - use getName
+     }
+ 
+     public void setBanned(boolean value) {
+         if (value) {
+-            server.getHandle().a(name.toLowerCase());
++            server.getHandle().a(getName().toLowerCase()); // Canyon - use getName
+         } else {
+-            server.getHandle().b(name.toLowerCase());
++            server.getHandle().b(getName().toLowerCase()); // Canyon - use getName
+         }
+     }
+ 
+     public boolean isWhitelisted() {
+-        return server.getHandle().e().contains(name.toLowerCase());
++        return server.getHandle().e().contains(getName().toLowerCase()); // Canyon - use getName
+     }
+ 
+     public void setWhitelisted(boolean value) {
+         if (value) {
+-            server.getHandle().k(name.toLowerCase());
++            server.getHandle().k(getName().toLowerCase()); // Canyon - use getName
+         } else {
+-            server.getHandle().l(name.toLowerCase());
++            server.getHandle().l(getName().toLowerCase()); // Canyon - use getName
+         }
+     }
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+index 4f1902fc..3bd04ca8 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -3,6 +3,7 @@ package org.bukkit.craftbukkit;
+ import java.io.FileNotFoundException;
+ 
+ import com.canyonmodded.config.CanyonConfig;
++import com.github.steveice10.mc.auth.data.GameProfile;
+ import org.bukkit.generator.ChunkGenerator;
+ import com.avaje.ebean.config.DataSourceConfig;
+ import com.avaje.ebean.config.ServerConfig;
+@@ -238,6 +239,19 @@ public final class CraftServer implements Server {
+         return null;
+     }
+ 
++    // Canyon start
++    @Override
++    public Player getPlayer(UUID id) {
++        for (Player player : getOnlinePlayers()) {
++            if (player.getUniqueId().equals(id)) {
++                return player;
++            }
++        }
++
++        return null;
++    }
++    // Canyon end
++
+     public int broadcastMessage(String message) {
+         return broadcast(message, BROADCAST_CHANNEL_USERS);
+     }
+@@ -365,7 +379,7 @@ public final class CraftServer implements Server {
+         boolean animals = config.getBoolean("spawn-animals", console.spawnAnimals);
+         boolean monsters = config.getBoolean("spawn-monsters", console.worlds.get(0).spawnMonsters > 0);
+ 
+-        console.onlineMode = config.getBoolean("online-mode", console.onlineMode);
++        //console.onlineMode = config.getBoolean("online-mode", console.onlineMode); // Canyon - online mode doesn't work.
+         console.spawnAnimals = config.getBoolean("spawn-animals", console.spawnAnimals);
+         console.pvpMode = config.getBoolean("pvp", console.pvpMode);
+         console.allowFlight = config.getBoolean("allow-flight", console.allowFlight);
+@@ -783,11 +797,23 @@ public final class CraftServer implements Server {
+         OfflinePlayer result = getPlayer(name);
+ 
+         if (result == null) {
+-            result = new CraftOfflinePlayer(this, name);
++            result = new CraftOfflinePlayer(this, new GameProfile((UUID) null, name));
++        }
++
++        return result;
++    }
++
++    // Canyon start
++    @Override
++    public OfflinePlayer getOfflinePlayer(UUID id) {
++        OfflinePlayer result = getPlayer(id);
++        if (result == null) {
++            result = new CraftOfflinePlayer(this, new GameProfile(id, null));
+         }
+ 
+         return result;
+     }
++    // Canyon end
+ 
+     public Set<String> getIPBans() {
+         return new HashSet(server.banByIP);
+-- 
+2.24.1.windows.2
+

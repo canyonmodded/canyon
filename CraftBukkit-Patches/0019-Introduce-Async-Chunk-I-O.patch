@@ -1,4 +1,4 @@
-From 4ae36182d9f100ed1a647cd40f72ce3a416cfdbd Mon Sep 17 00:00:00 2001
+From 7d75b6ae467f02c4be197eab76a9ed45d754e293 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 5 Oct 2019 03:08:44 -0400
 Subject: [PATCH] Introduce Async Chunk I/O
@@ -257,7 +257,7 @@ index 0b232fd1..b39098b4 100644
 +    // Canyon End
  }
 diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
-index 2ba2a177..1632206e 100644
+index 3fc272a6..115745d4 100644
 --- a/src/main/java/net/minecraft/server/EntityPlayer.java
 +++ b/src/main/java/net/minecraft/server/EntityPlayer.java
 @@ -1,7 +1,6 @@
@@ -285,10 +285,10 @@ index 2ba2a177..1632206e 100644
          --this.bM;
          this.activeContainer.a();
 diff --git a/src/main/java/net/minecraft/server/NetLoginHandler.java b/src/main/java/net/minecraft/server/NetLoginHandler.java
-index 145d61a1..dfa5b6d9 100644
+index 88eb37f1..83912fae 100644
 --- a/src/main/java/net/minecraft/server/NetLoginHandler.java
 +++ b/src/main/java/net/minecraft/server/NetLoginHandler.java
-@@ -112,6 +112,11 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
+@@ -114,6 +114,11 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
              a.info(this.b() + " logged in with entity id " + entityplayer.id + " at ([" + entityplayer.world.worldData.name + "] " + entityplayer.locX + ", " + entityplayer.locY + ", " + entityplayer.locZ + ")");
              WorldServer worldserver = (WorldServer) entityplayer.world; // CraftBukkit
              ChunkCoordinates chunkcoordinates = worldserver.getSpawn();
@@ -300,7 +300,7 @@ index 145d61a1..dfa5b6d9 100644
              NetServerHandler netserverhandler = new NetServerHandler(this.server, this.networkManager, entityplayer);
  
              netserverhandler.sendPacket(new Packet1Login("", entityplayer.id, worldserver.getSeed(), (byte) worldserver.worldProvider.dimension));
-@@ -123,6 +128,8 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
+@@ -125,6 +130,8 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
              if (this.server.networkListenThread != null) this.server.networkListenThread.a(netserverhandler); // Canyon
              netserverhandler.sendPacket(new Packet4UpdateTime(entityplayer.getPlayerTime())); // CraftBukkit - add support for player specific time
              entityplayer.syncInventory();
@@ -323,10 +323,10 @@ index 3c7706d5..d32d70db 100644
  
      public void a(EntityPlayer entityplayer) {
 diff --git a/src/main/java/net/minecraft/server/ServerConfigurationManager.java b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
-index 981f058a..30d058a0 100644
+index 8f25a50d..919b3428 100644
 --- a/src/main/java/net/minecraft/server/ServerConfigurationManager.java
 +++ b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
-@@ -89,7 +89,7 @@ public class ServerConfigurationManager {
+@@ -86,7 +86,7 @@ public class ServerConfigurationManager {
          this.getPlayerManager(entityplayer.dimension).addPlayer(entityplayer);
          WorldServer worldserver = this.server.getWorldServer(entityplayer.dimension);
  
@@ -335,7 +335,7 @@ index 981f058a..30d058a0 100644
      }
  
      public int a() {
-@@ -113,7 +113,7 @@ public class ServerConfigurationManager {
+@@ -110,7 +110,7 @@ public class ServerConfigurationManager {
          this.players.add(entityplayer);
          WorldServer worldserver = this.server.getWorldServer(entityplayer.dimension);
  
@@ -344,7 +344,7 @@ index 981f058a..30d058a0 100644
  
          while (worldserver.getEntities(entityplayer, entityplayer.boundingBox).size() != 0) {
              entityplayer.setPosition(entityplayer.locX, entityplayer.locY + 1.0D, entityplayer.locZ);
-@@ -249,26 +249,44 @@ public class ServerConfigurationManager {
+@@ -247,26 +247,44 @@ public class ServerConfigurationManager {
          entityplayer1.setLocation(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
          // CraftBukkit end
  
@@ -397,5 +397,5 @@ index 981f058a..30d058a0 100644
      }
  
 -- 
-2.22.0
+2.24.1.windows.2
 

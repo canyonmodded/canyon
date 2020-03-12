@@ -1,4 +1,4 @@
-From 6aa2f865556d218cc892c3381e03b20389222fb3 Mon Sep 17 00:00:00 2001
+From 0d2c339df5797cb44ac8b3410ade7cfad8f11b8f Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Tue, 8 Oct 2019 19:56:55 -0400
 Subject: [PATCH] Send queued chunk packets at opportune times
@@ -26,10 +26,10 @@ index 115745d4..81916e20 100644
              // Canyon start - rewrote logic and moved elsewhere
              this.sendQueuedChunks();
 diff --git a/src/main/java/net/minecraft/server/NetLoginHandler.java b/src/main/java/net/minecraft/server/NetLoginHandler.java
-index dfa5b6d9..0a81ce3f 100644
+index 83912fae..308b49b7 100644
 --- a/src/main/java/net/minecraft/server/NetLoginHandler.java
 +++ b/src/main/java/net/minecraft/server/NetLoginHandler.java
-@@ -128,6 +128,7 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
+@@ -130,6 +130,7 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
              if (this.server.networkListenThread != null) this.server.networkListenThread.a(netserverhandler); // Canyon
              netserverhandler.sendPacket(new Packet4UpdateTime(entityplayer.getPlayerTime())); // CraftBukkit - add support for player specific time
              entityplayer.syncInventory();
@@ -38,10 +38,10 @@ index dfa5b6d9..0a81ce3f 100644
              // Canyon End
          }
 diff --git a/src/main/java/net/minecraft/server/ServerConfigurationManager.java b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
-index 30d058a0..b9c75f0a 100644
+index 919b3428..2708a91d 100644
 --- a/src/main/java/net/minecraft/server/ServerConfigurationManager.java
 +++ b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
-@@ -654,5 +654,6 @@ public class ServerConfigurationManager {
+@@ -652,5 +652,6 @@ public class ServerConfigurationManager {
      public void updateClient(EntityPlayer entityplayer) {
          entityplayer.updateInventory(entityplayer.defaultContainer);
          entityplayer.C();
@@ -49,5 +49,5 @@ index 30d058a0..b9c75f0a 100644
      }
  }
 -- 
-2.24.1
+2.24.1.windows.2
 
