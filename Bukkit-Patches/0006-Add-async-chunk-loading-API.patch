@@ -1,4 +1,4 @@
-From 41ef50c2a1fdacc045c8240436bb1a836d44d61f Mon Sep 17 00:00:00 2001
+From f17c4dfd40a71c8033b3f2cd92d21ab15c26ec23 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Fri, 13 Mar 2020 01:19:14 -0400
 Subject: [PATCH] Add async chunk loading API
@@ -7,10 +7,10 @@ Mostly compatible with the Paper API, except generation can not
 be triggered.
 
 diff --git a/src/main/java/org/bukkit/World.java b/src/main/java/org/bukkit/World.java
-index c46e963a..6ec0817d 100644
+index c46e963a..eedecbfb 100644
 --- a/src/main/java/org/bukkit/World.java
 +++ b/src/main/java/org/bukkit/World.java
-@@ -714,6 +714,259 @@ public interface World {
+@@ -714,6 +714,261 @@ public interface World {
       */
      public void setAutoSave(boolean value);
  
@@ -242,7 +242,9 @@ index c46e963a..6ec0817d 100644
 +     * @param z Z Coord
 +     * @return Future that will resolve when the chunk is loaded
 +     */
-+    public java.util.concurrent.CompletableFuture<Chunk> getChunkAtAsync(int x, int z);
++    public default java.util.concurrent.CompletableFuture<Chunk> getChunkAtAsync(int x, int z) {
++        return java.util.concurrent.CompletableFuture.completedFuture(this.getChunkAt(x, z));
++    }
 +
 +    /**
 +     * Requests a {@link Chunk} to be loaded at the given coordinates
