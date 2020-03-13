@@ -1,0 +1,252 @@
+From b1b24ecbf4dbfb076011855ba012819fc70fdca3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jakub=20Staro=C5=84?= <kubastaron@hotmail.com>
+Date: Thu, 12 Mar 2020 01:34:54 +0100
+Subject: [PATCH] Add UUID api and /uuid command
+
+
+diff --git a/pom.xml b/pom.xml
+index d93fa53b..d92c2d70 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -83,6 +83,14 @@
+             </plugin>
+         </plugins>
+     </build>
++    <!-- Canyon start -->
++    <repositories>
++        <repository>
++            <id>jitpack.io</id>
++            <url>https://jitpack.io</url>
++        </repository>
++    </repositories>
++    <!-- Canyon end -->
+     <dependencies>
+         <dependency>
+             <groupId>org.yaml</groupId>
+@@ -112,5 +120,12 @@
+             <type>jar</type>
+             <scope>compile</scope>
+         </dependency>
++        <!-- Canyon start -->
++        <dependency>
++            <groupId>com.github.js6pak</groupId>
++            <artifactId>MCAuthLib</artifactId>
++            <version>master-SNAPSHOT</version>
++        </dependency>
++        <!-- Canyon end -->
+     </dependencies>
+ </project>
+diff --git a/src/main/java/com/canyonmodded/command/UUIDCommand.java b/src/main/java/com/canyonmodded/command/UUIDCommand.java
+new file mode 100644
+index 00000000..785e1e56
+--- /dev/null
++++ b/src/main/java/com/canyonmodded/command/UUIDCommand.java
+@@ -0,0 +1,37 @@
++package com.canyonmodded.command;
++
++import org.bukkit.Bukkit;
++import org.bukkit.ChatColor;
++import org.bukkit.command.Command;
++import org.bukkit.command.CommandSender;
++import org.bukkit.entity.Player;
++
++public class UUIDCommand extends Command {
++    public UUIDCommand() {
++        super("uuid");
++        this.description = "Get uuid of player.";
++        this.usageMessage = "/uuid [player]";
++    }
++
++    @Override
++    public boolean execute(CommandSender sender, String label, String[] args) {
++        Player player;
++        if (args.length >= 1) {
++            player = Bukkit.getPlayerExact(args[0]);
++        } else if (sender instanceof Player) {
++            player = (Player) sender;
++        } else {
++            sender.sendMessage(ChatColor.RED + "Usage: " + this.usageMessage);
++            return false;
++        }
++
++        if (player == null) {
++            sender.sendMessage("There's no player by that name online.");
++            return false;
++        }
++
++        sender.sendMessage(ChatColor.GRAY + "UUID of player " + ChatColor.WHITE + player.getName() + ChatColor.GRAY +  " is " + ChatColor.GREEN + player.getUniqueId());
++
++        return true;
++    }
++}
+\ No newline at end of file
+diff --git a/src/main/java/org/bukkit/OfflinePlayer.java b/src/main/java/org/bukkit/OfflinePlayer.java
+index fff8aa8b..922ebcad 100644
+--- a/src/main/java/org/bukkit/OfflinePlayer.java
++++ b/src/main/java/org/bukkit/OfflinePlayer.java
+@@ -2,6 +2,8 @@ package org.bukkit;
+ 
+ import org.bukkit.permissions.ServerOperator;
+ 
++import java.util.UUID;
++
+ public interface OfflinePlayer extends ServerOperator {
+     /**
+      * Checks if this player is currently online
+@@ -44,4 +46,13 @@ public interface OfflinePlayer extends ServerOperator {
+      * @param value true if whitelisted
+      */
+     public void setWhitelisted(boolean value);
++
++    // Canyon start
++    /**
++     * Returns the UUID of this player
++     *
++     * @return Player UUID
++     */
++    public UUID getUniqueId();
++    // Canyon end
+ }
+diff --git a/src/main/java/org/bukkit/Server.java b/src/main/java/org/bukkit/Server.java
+index 8b21ad20..aeb242f9 100644
+--- a/src/main/java/org/bukkit/Server.java
++++ b/src/main/java/org/bukkit/Server.java
+@@ -169,6 +169,16 @@ public interface Server {
+      */
+     public Player getPlayerExact(String name);
+ 
++    // Canyon start
++    /**
++     * Gets the player with the given UUID.
++     *
++     * @param id UUID of the player to retrieve
++     * @return a player object if one was found, null otherwise
++     */
++    public Player getPlayer(UUID id);
++    // Canyon end
++
+     /**
+      * Attempts to match any players with the given name, and returns a list
+      * of all possibly matches
+@@ -290,18 +300,18 @@ public interface Server {
+      * @return World with the given Unique ID, or null if none exists.
+      */
+     public World getWorld(UUID uid);
+-    
++
+     /**
+      * Gets the map from the given item ID.
+-     * 
++     *
+      * @param id ID of the map to get.
+      * @return The MapView if it exists, or null otherwise.
+      */
+     public MapView getMap(short id);
+-    
++
+     /**
+      * Create a new map with an automatically assigned ID.
+-     * 
++     *
+      * @param world The world the map will belong to.
+      * @return The MapView just created.
+      */
+@@ -414,6 +424,20 @@ public interface Server {
+      */
+     public OfflinePlayer getOfflinePlayer(String name);
+ 
++    // Canyon start
++    /**
++     * Gets the player by the given UUID, regardless if they are offline or
++     * online.
++     * <p>
++     * This will return an object even if the player does not exist. To this
++     * method, all players will exist.
++     *
++     * @param id the UUID of the player to retrieve
++     * @return an offline player
++     */
++    public OfflinePlayer getOfflinePlayer(UUID id);
++    // Canyon end
++
+     /**
+      * Gets a set containing all current IPs that are banned
+      *
+diff --git a/src/main/java/org/bukkit/command/SimpleCommandMap.java b/src/main/java/org/bukkit/command/SimpleCommandMap.java
+index b3b32908..54b01a1b 100644
+--- a/src/main/java/org/bukkit/command/SimpleCommandMap.java
++++ b/src/main/java/org/bukkit/command/SimpleCommandMap.java
+@@ -1,6 +1,7 @@
+ package org.bukkit.command;
+ 
+ import com.canyonmodded.command.TpsCommand;
++import com.canyonmodded.command.UUIDCommand;
+ import org.bukkit.command.defaults.*;
+ import java.util.ArrayList;
+ import java.util.HashMap;
+@@ -54,6 +55,7 @@ public class SimpleCommandMap implements CommandMap {
+ 
+         // Canyon start - register canyon commands
+         register("canyon", new TpsCommand(server));
++        register("canyon", new UUIDCommand());
+         // Canyon end
+     }
+ 
+diff --git a/src/main/java/org/bukkit/event/player/PlayerPreLoginEvent.java b/src/main/java/org/bukkit/event/player/PlayerPreLoginEvent.java
+index 1566fc19..e261e602 100644
+--- a/src/main/java/org/bukkit/event/player/PlayerPreLoginEvent.java
++++ b/src/main/java/org/bukkit/event/player/PlayerPreLoginEvent.java
+@@ -1,6 +1,8 @@
+ package org.bukkit.event.player;
+ 
+ import java.net.InetAddress;
++import java.util.UUID;
++
+ import org.bukkit.event.Event;
+ 
+ /**
+@@ -11,14 +13,23 @@ public class PlayerPreLoginEvent extends Event {
+     private String message;
+     private String name;
+     private InetAddress ipAddress;
++    // Canyon start
++    private UUID uniqueId;
+ 
++    @Deprecated
+     public PlayerPreLoginEvent(String name, InetAddress ipAddress) {
++        this(name, ipAddress, null);
++    }
++
++    public PlayerPreLoginEvent(String name, InetAddress ipAddress, UUID uniqueId) {
+         super(Type.PLAYER_PRELOGIN);
+         this.result = Result.ALLOWED;
+         this.message = "";
+         this.name = name;
+         this.ipAddress = ipAddress;
++        this.uniqueId = uniqueId;
+     }
++    // Canyon end
+ 
+     /**
+      * Gets the current result of the login, as an enum
+@@ -93,6 +104,17 @@ public class PlayerPreLoginEvent extends Event {
+         return ipAddress;
+     }
+ 
++    // Canyon start
++    /**
++     * Gets the player's unique ID.
++     *
++     * @return The unique ID
++     */
++    public UUID getUniqueId() {
++        return uniqueId;
++    }
++    // Canyon end
++
+     /**
+      * Basic kick reasons for communicating to plugins
+      */
+-- 
+2.24.1.windows.2
+
