@@ -1,4 +1,4 @@
-From 5f9476b95d04a74d7f57e0a0cd60329d60b46e90 Mon Sep 17 00:00:00 2001
+From eff2618270ce384852f30c917ce8552281ff9f6c Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] New networking stack
@@ -706,6 +706,19 @@ index f83acc41..525c00ff 100644
              System.out.println("Reached end of stream");
              return null;
          }
+diff --git a/src/main/java/net/minecraft/server/Packet10Flying.java b/src/main/java/net/minecraft/server/Packet10Flying.java
+index 7bf2f671..66a440b9 100644
+--- a/src/main/java/net/minecraft/server/Packet10Flying.java
++++ b/src/main/java/net/minecraft/server/Packet10Flying.java
+@@ -22,7 +22,7 @@ public class Packet10Flying extends Packet {
+     }
+ 
+     public void a(DataInputStream datainputstream) throws java.io.IOException { // Canyon - fix decompile
+-        this.g = datainputstream.read() != 0;
++        this.g = datainputstream.readBoolean(); // Canyon - ensure EOFException is thrown if the status byte is not there
+     }
+ 
+     public void a(DataOutputStream dataoutputstream) throws java.io.IOException { // Canyon - fix decompile
 diff --git a/src/main/java/net/minecraft/server/ThreadLoginVerifier.java b/src/main/java/net/minecraft/server/ThreadLoginVerifier.java
 index ffeba862..6157876d 100644
 --- a/src/main/java/net/minecraft/server/ThreadLoginVerifier.java
@@ -731,5 +744,5 @@ index ffeba862..6157876d 100644
                  this.server.server.getPluginManager().callEvent(event);
  
 -- 
-2.24.1.windows.2
+2.25.1
 

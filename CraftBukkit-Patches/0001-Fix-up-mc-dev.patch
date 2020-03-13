@@ -1,4 +1,4 @@
-From 7c82bc5cfd158e01a76c64d19bff5444892b7e19 Mon Sep 17 00:00:00 2001
+From b1ba53bedadc1abe033bed3b6a5b00cb52375cc1 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 1 Jun 2019 03:06:56 -0400
 Subject: [PATCH] Fix up mc-dev
@@ -45,6 +45,24 @@ index d67d6bd9..b461a80f 100644
  
      private static long f = 0L;
      public int a;
+diff --git a/src/main/java/net/minecraft/server/Packet10Flying.java b/src/main/java/net/minecraft/server/Packet10Flying.java
+index 505e0ea6..7bf2f671 100644
+--- a/src/main/java/net/minecraft/server/Packet10Flying.java
++++ b/src/main/java/net/minecraft/server/Packet10Flying.java
+@@ -21,11 +21,11 @@ public class Packet10Flying extends Packet {
+         nethandler.a(this);
+     }
+ 
+-    public void a(DataInputStream datainputstream) {
++    public void a(DataInputStream datainputstream) throws java.io.IOException { // Canyon - fix decompile
+         this.g = datainputstream.read() != 0;
+     }
+ 
+-    public void a(DataOutputStream dataoutputstream) {
++    public void a(DataOutputStream dataoutputstream) throws java.io.IOException { // Canyon - fix decompile
+         dataoutputstream.write(this.g ? 1 : 0);
+     }
+ 
 diff --git a/src/main/java/net/minecraft/server/RegionFile.java b/src/main/java/net/minecraft/server/RegionFile.java
 index 8e49cbc4..1aca87dd 100644
 --- a/src/main/java/net/minecraft/server/RegionFile.java
@@ -107,5 +125,5 @@ index 038afed5..e5c92b7f 100644
          int dimension = 10 + console.worlds.size();
          WorldServer internal = new WorldServer(console, new ServerNBTManager(new File("."), name, true), name, dimension, seed, environment, generator);
 -- 
-2.22.0
+2.25.1
 
