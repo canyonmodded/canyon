@@ -1,9 +1,14 @@
-From 4ae36182d9f100ed1a647cd40f72ce3a416cfdbd Mon Sep 17 00:00:00 2001
+From 5eaae68530fb004584143f96278f7027e47a48a0 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 5 Oct 2019 03:08:44 -0400
 Subject: [PATCH] Introduce Async Chunk I/O
 
-Highly experimental and only supports async chunk loads. More TBD.
+This patch is highly experimental. It offloads chunk loading (saving
+is a future addition) to a separate I/O thread pool.
+
+This feature has been designed such that it will make as few changes
+to the rest of the server as possible, whilst leveraging async chunk
+loading in places where it is most likely to help.
 
 diff --git a/src/main/java/net/minecraft/server/ChunkProviderServer.java b/src/main/java/net/minecraft/server/ChunkProviderServer.java
 index 0b232fd1..b39098b4 100644
@@ -257,7 +262,7 @@ index 0b232fd1..b39098b4 100644
 +    // Canyon End
  }
 diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
-index 2ba2a177..1632206e 100644
+index 3fc272a6..115745d4 100644
 --- a/src/main/java/net/minecraft/server/EntityPlayer.java
 +++ b/src/main/java/net/minecraft/server/EntityPlayer.java
 @@ -1,7 +1,6 @@
@@ -396,6 +401,24 @@ index 981f058a..30d058a0 100644
          return entityplayer1;
      }
  
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftWorld.java b/src/main/java/org/bukkit/craftbukkit/CraftWorld.java
+index 0faf610e..c51e06fb 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftWorld.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftWorld.java
+@@ -583,6 +583,13 @@ public class CraftWorld implements World {
+         world.canSave = !value;
+     }
+ 
++    // Canyon Start
++    @Override
++    public java.util.concurrent.CompletableFuture<Chunk> getChunkAtAsync(int x, int z) {
++        return this.world.chunkProviderServer.getChunkAtAsync(x, z).thenApply(chunk -> chunk.bukkitChunk);
++    }
++    // Canyon End
++
+     public boolean hasStorm() {
+         return world.worldData.hasStorm();
+     }
 -- 
-2.22.0
+2.25.1
 

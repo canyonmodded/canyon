@@ -1,8 +1,14 @@
-From 7e3f45ddb5c73c224d5c401dc14c284e16fbf056 Mon Sep 17 00:00:00 2001
+From c45a75b29e1c9f0792badcc9cc03474034044e11 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Fri, 23 Aug 2019 00:03:35 -0400
 Subject: [PATCH] Improved chunk send queue
 
+CraftBukkit's original chunk send queue sent chunks in an uneven order.
+This was most noticeable with the Netty networking stack and async chunk
+loading.
+
+Canyon now sends chunks based on their distance to the player, which
+provides a smoother load.
 
 diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
 index c7fa3a18..3fc272a6 100644
@@ -101,5 +107,5 @@ index 3dbb30d3..af7ff765 100644
          }
      }
 -- 
-2.22.0
+2.25.1
 

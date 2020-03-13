@@ -1,13 +1,17 @@
-From eff2618270ce384852f30c917ce8552281ff9f6c Mon Sep 17 00:00:00 2001
+From 32edba9bbbc4cba9787e0585a5ea9071ea11b725 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
-Subject: [PATCH] New networking stack
+Subject: [PATCH] Exprimental new networking stack
 
-This is a simple graft of Netty (the networking library used in modern
-versions of Minecraft) onto Minecraft Beta 1.7.3.
+This patch adds an experimental networking stack to Canyon, based on
+Netty (the de facto networking library for Java). Netty is proven, and
+it also powers every post-release Minecraft version from 1.7.2 onwards.
 
-This implementation is simple and still has much room for improvement,
-however it should feel snappier than the old networking stack.
+The primary benefit to using the Netty networking stack include improvements
+to chunk loading times, login times, and overall smoother game play.
+However, the implementation makes no attempt to support plugins that
+modify the packet reader and writer to manipulate packets. An alternative
+API may be provided in the future.
 
 diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
 index d7dffe62..971ac06c 100644

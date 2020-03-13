@@ -1,12 +1,16 @@
-From 29714ad1aac1346f5ceacd0e311dcdec864c13dd Mon Sep 17 00:00:00 2001
+From 4585b783ae0de34a81e3371249ba98fecafa6594 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 00:38:54 -0400
 Subject: [PATCH] Backport: Improve server tick loop and implement tps api
 
-This patch was backported from Paper 1.14.4 to Canyon and brings an
-important feature to help stamp out lag.
+This patch was backported from Paper 1.14.4 to Canyon. The original
+author of the patch in Paper is Aikar.
 
-The original author of the patch in Paper is Aikar.
+This patch provides a more stable server tick loop that is not affected
+by changes in the system time. In addition, it is intended to keep the
+server at 20 TPS unless it can not realistically do so. This patch also
+allows Canyon to keep track of server TPS, which can be viewed with the
+/tps command.
 
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
 index 59358fbd..28178ba9 100644
@@ -158,5 +162,5 @@ index e7e3ccf7..b2123565 100644
          server.o = value;
          console.propertyManager.b("white-list", value);
 -- 
-2.24.1.windows.2
+2.25.1
 
