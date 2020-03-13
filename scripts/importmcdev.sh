@@ -42,6 +42,7 @@ import ThreadServerApplication
 import BlockChest
 import BlockGrass
 import BlockFlowing
+import Packet10Flying
 
 cd "$basedir/CraftBukkit"
 $gitcmd add . -A >/dev/null 2>&1
