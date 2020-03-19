@@ -184,8 +184,9 @@ case "$command" in
     exit 1
   fi
 
+  dependencies=( ${class_paths[@]} ${transitive_dependencies[@]} )
   ( >&2 echo "Unpacking jar from $jar_path" )
-  if ! output=$(unzip -q "$jar_path" "META-INF/*" $(printf '%s\n' $class_paths $transitive_dependencies | sort | uniq) -d "$tmp_dir" 2>&1); then
+  if ! output=$(unzip -q "$jar_path" "META-INF/*" $(printf '%s\n' "${dependencies[@]}" | sort | uniq) -d "$tmp_dir" 2>&1); then
     >&2 echo "Error: $output"; exit 1
   fi
 

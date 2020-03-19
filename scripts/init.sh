@@ -36,13 +36,20 @@ if [ ! -f $fastutilmin ]; then
     exit 1
   fi
 
+  # Maven is pedantic and needs a clean working directory
+  tmpdir=$(mktemp -d -t "canyon-maven-init.XXXX")
+  canyondir=$(pwd)
+  pushd "$canyondir" 1>/dev/null || (echo "Can't push directory on stack" && exit 1)
+  cd "$tmpdir" || (echo "Can't move to work directory" && exit 1)
+
   echo "Installing minimized fastutil jar into local repository..."
   if ! mvn -q org.apache.maven.plugins:maven-install-plugin:2.3.1:install-file \
-                         -Dfile=$fastutilmin -DgroupId=com.canyonmodded \
+                         -Dfile="$canyondir/$fastutilmin" -DgroupId=com.canyonmodded \
                          -DartifactId=fastutil-min -Dversion=8.3.1 \
-                         -Dpackaging=jar -DlocalRepositoryPath=work/local-repo
+                         -Dpackaging=jar -DlocalRepositoryPath="$canyondir/work/local-repo"
   then
     echo "Unable to install minimized fastutil into local work repository"
     exit 1
   fi
+  popd 1>/dev/null || exit 1
 fi
