@@ -176,8 +176,7 @@ case "$command" in
   class_list=${class_list//\//.}
 
   if ! transitive_dependencies=$(cd ${tmp_dir} && jdeps -recursive -regex "$fastutil_regex" \
-    -verbose:class -cp "$jar_path" ${class_list} | grep '      -> ' |\
-    sed 's!      -> \(\S*\) \+\S*!\1!' | sort | uniq | sed 's!\.!/!g' | sed 's!$!.class!')\
+    -verbose:class -cp "$jar_path" ${class_list} | awk '/      -> / { gsub(/\./, "/", $2) ".class"; print $2 ".class" }')\
     || [ -z "$transitive_dependencies" ]
   then
     >&2 echo "Could not resolve dependencies with $jar_path - probably not a complete fastutil jar."
