@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Script to minimize fastutil dependencies.
 # Sourced from https://raw.githubusercontent.com/vigna/fastutil/master/find-deps.sh, licensed under Apache-2.0
