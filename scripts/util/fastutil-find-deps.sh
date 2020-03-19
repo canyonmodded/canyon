@@ -120,7 +120,7 @@ case "$command" in
 
   if ! dependencies=$(jdeps -recursive -verbose:class \
     "${classpath_argument[@]+"${classpath_argument[@]}"}" "${analyse_paths[@]}" |\
-    grep '^      -> it\.unimi\.dsi\.fastutil\..*not found$' | sed 's!      -> \(\S*\) \+not found$!\1!' | sort | uniq) \
+    awk '/it\.unimi\.dsi\.fastutil\..*not found$/ { print $2 }' | sort | uniq) \
     || [ -z "$dependencies" ]
   then
     >&2 echo "No unresolved references found - is fastutil on the classpath?"
