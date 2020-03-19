@@ -1,4 +1,4 @@
-From 9fa82c118209a47b2bbe24840e54d83179b7b7f6 Mon Sep 17 00:00:00 2001
+From e24867ff3d86fd71937a6bee18fc68f946b61bd6 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sun, 6 Oct 2019 17:06:39 -0400
 Subject: [PATCH] Disable Nagle's algorithm
@@ -30,5 +30,5 @@ index 85618930..e393ad56 100644
              this.output = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream(), 5120));
          } catch (java.io.IOException socketexception) {
 -- 
-2.22.0
+2.25.2
 

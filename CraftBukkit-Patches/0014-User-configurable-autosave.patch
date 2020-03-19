@@ -1,25 +1,27 @@
-From 4a02818b5b40fed833fc693c7e5fdfbf9d355a0f Mon Sep 17 00:00:00 2001
+From c204f93fbb1178cd4760d9e3c8ca0db1453ae926 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Mon, 30 Sep 2019 02:28:06 -0400
 Subject: [PATCH] User-configurable autosave
 
 
 diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
-index 971ac06c..fbd18a31 100644
+index 971ac06c..0e5b7a19 100644
 --- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
 +++ b/src/main/java/com/canyonmodded/config/CanyonConfig.java
-@@ -7,6 +7,7 @@ import java.io.File;
+@@ -7,6 +7,8 @@ import java.io.File;
  public class CanyonConfig {
      // Add settings here. Make sure they're public visibility!
      public static boolean useNewNetworkingStack = false;
++    public static int maxOutstandingChunks = 2;
 +    public static int autoSave = 6000;
  
      public static void loadConfiguration(File file) {
          Configuration configuration = new Configuration(file);
-@@ -14,6 +15,7 @@ public class CanyonConfig {
+@@ -14,6 +16,8 @@ public class CanyonConfig {
  
          // Load settings here.
          useNewNetworkingStack = configuration.getBoolean("settings.use-new-networking-stack", false);
++        maxOutstandingChunks = configuration.getInt("settings.max-outstanding-chunks", maxOutstandingChunks);
 +        autoSave = configuration.getInt("settings.auto-save-every", 6000);
  
          configuration.save();
@@ -38,5 +40,5 @@ index 4c19b963..1d4ad166 100644
          }
  
 -- 
-2.22.0.windows.1
+2.25.2
 

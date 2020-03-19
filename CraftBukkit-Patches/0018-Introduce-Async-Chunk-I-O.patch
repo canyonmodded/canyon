@@ -1,4 +1,4 @@
-From 5eaae68530fb004584143f96278f7027e47a48a0 Mon Sep 17 00:00:00 2001
+From aabcb0519791710c8685b96fe625f3dab733447c Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 5 Oct 2019 03:08:44 -0400
 Subject: [PATCH] Introduce Async Chunk I/O
@@ -262,7 +262,7 @@ index 0b232fd1..b39098b4 100644
 +    // Canyon End
  }
 diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
-index 3fc272a6..115745d4 100644
+index c7fa3a18..328f385f 100644
 --- a/src/main/java/net/minecraft/server/EntityPlayer.java
 +++ b/src/main/java/net/minecraft/server/EntityPlayer.java
 @@ -1,7 +1,6 @@
@@ -273,7 +273,7 @@ index 3fc272a6..115745d4 100644
  import java.util.List;
  import java.util.Set;
  
-@@ -38,6 +37,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+@@ -28,6 +27,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
      private ItemStack[] bN = new ItemStack[] { null, null, null, null, null};
      private int bO = 0;
      public boolean h;
@@ -281,7 +281,7 @@ index 3fc272a6..115745d4 100644
  
      public EntityPlayer(MinecraftServer minecraftserver, World world, String s, ItemInWorldManager iteminworldmanager) {
          super(world);
-@@ -111,6 +111,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+@@ -101,6 +101,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
      }
  
      public void m_() {
@@ -420,5 +420,5 @@ index 0faf610e..c51e06fb 100644
          return world.worldData.hasStorm();
      }
 -- 
-2.25.1
+2.25.2
 

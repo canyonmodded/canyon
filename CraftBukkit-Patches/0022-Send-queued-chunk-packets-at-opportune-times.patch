@@ -1,4 +1,4 @@
-From 6aa2f865556d218cc892c3381e03b20389222fb3 Mon Sep 17 00:00:00 2001
+From 0664ee3a91854294531a659dfad371eda20016eb Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Tue, 8 Oct 2019 19:56:55 -0400
 Subject: [PATCH] Send queued chunk packets at opportune times
@@ -6,10 +6,10 @@ Subject: [PATCH] Send queued chunk packets at opportune times
 Fixes annoying post-login/teleport lag where you can get "stuck" in stone.
 
 diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
-index 115745d4..81916e20 100644
+index 51fe099e..889e498b 100644
 --- a/src/main/java/net/minecraft/server/EntityPlayer.java
 +++ b/src/main/java/net/minecraft/server/EntityPlayer.java
-@@ -112,6 +112,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+@@ -113,6 +113,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
  
      public void m_() {
          if (isRespawning) return; // Canyon
@@ -17,7 +17,7 @@ index 115745d4..81916e20 100644
          this.itemInWorldManager.a();
          --this.bM;
          this.activeContainer.a();
-@@ -215,6 +216,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+@@ -216,6 +217,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
              }
          }
  
@@ -38,10 +38,18 @@ index dfa5b6d9..0a81ce3f 100644
              // Canyon End
          }
 diff --git a/src/main/java/net/minecraft/server/ServerConfigurationManager.java b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
-index 30d058a0..b9c75f0a 100644
+index 30d058a0..7ab9e275 100644
 --- a/src/main/java/net/minecraft/server/ServerConfigurationManager.java
 +++ b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
-@@ -654,5 +654,6 @@ public class ServerConfigurationManager {
+@@ -132,6 +132,7 @@ public class ServerConfigurationManager {
+ 
+         worldserver.addEntity(entityplayer);
+         this.getPlayerManager(entityplayer.dimension).addPlayer(entityplayer);
++        this.server.queueTask(entityplayer::sendQueuedChunks); // Canyon
+     }
+ 
+     public void d(EntityPlayer entityplayer) {
+@@ -654,5 +655,6 @@ public class ServerConfigurationManager {
      public void updateClient(EntityPlayer entityplayer) {
          entityplayer.updateInventory(entityplayer.defaultContainer);
          entityplayer.C();
@@ -49,5 +57,5 @@ index 30d058a0..b9c75f0a 100644
      }
  }
 -- 
-2.24.1
+2.25.2
 

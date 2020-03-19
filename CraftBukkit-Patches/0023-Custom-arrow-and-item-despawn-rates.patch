@@ -1,25 +1,25 @@
-From 53000520d2d333d802985d25df763a4f348a4ca9 Mon Sep 17 00:00:00 2001
+From c170107b164bc62cdb081295b9fec4eafcaf1093 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 26 Oct 2019 00:42:01 -0400
 Subject: [PATCH] Custom arrow and item despawn rates
 
 
 diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
-index fbd18a31..f9fd757e 100644
+index 0e5b7a19..2648e686 100644
 --- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
 +++ b/src/main/java/com/canyonmodded/config/CanyonConfig.java
-@@ -8,6 +8,8 @@ public class CanyonConfig {
-     // Add settings here. Make sure they're public visibility!
+@@ -9,6 +9,8 @@ public class CanyonConfig {
      public static boolean useNewNetworkingStack = false;
+     public static int maxOutstandingChunks = 2;
      public static int autoSave = 6000;
 +    public static int arrowDespawnRate = 1200;
 +    public static int itemDespawnRate = 6000;
  
      public static void loadConfiguration(File file) {
          Configuration configuration = new Configuration(file);
-@@ -16,6 +18,8 @@ public class CanyonConfig {
-         // Load settings here.
+@@ -18,6 +20,8 @@ public class CanyonConfig {
          useNewNetworkingStack = configuration.getBoolean("settings.use-new-networking-stack", false);
+         maxOutstandingChunks = configuration.getInt("settings.max-outstanding-chunks", maxOutstandingChunks);
          autoSave = configuration.getInt("settings.auto-save-every", 6000);
 +        arrowDespawnRate = configuration.getInt("optimization.arrow-despawn-rate", arrowDespawnRate);
 +        itemDespawnRate = configuration.getInt("optimization.item-despawn-rate", itemDespawnRate);
@@ -53,5 +53,5 @@ index d8558b67..d944acec 100644
          }
      }
 -- 
-2.22.0
+2.25.2
 

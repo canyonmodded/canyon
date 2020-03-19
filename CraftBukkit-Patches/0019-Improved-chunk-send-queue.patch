@@ -1,4 +1,4 @@
-From c45a75b29e1c9f0792badcc9cc03474034044e11 Mon Sep 17 00:00:00 2001
+From 0f1e7cdb5208cba8edb0e7c550f093bc96c56a2d Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Fri, 23 Aug 2019 00:03:35 -0400
 Subject: [PATCH] Improved chunk send queue
@@ -11,10 +11,10 @@ Canyon now sends chunks based on their distance to the player, which
 provides a smoother load.
 
 diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
-index c7fa3a18..3fc272a6 100644
+index 328f385f..51fe099e 100644
 --- a/src/main/java/net/minecraft/server/EntityPlayer.java
 +++ b/src/main/java/net/minecraft/server/EntityPlayer.java
-@@ -21,7 +21,17 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+@@ -20,7 +20,18 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
      public ItemInWorldManager itemInWorldManager;
      public double d;
      public double e;
@@ -29,11 +29,12 @@ index c7fa3a18..3fc272a6 100644
 +        return Double.compare(pair1Dist, pair2Dist);
 +    };
 +    public java.util.Queue<ChunkCoordIntPair> chunkCoordIntPairQueue = new java.util.PriorityQueue<>(pairsCloseToMe);
++    private final java.util.concurrent.Semaphore chunkSendSemaphore = new java.util.concurrent.Semaphore(com.canyonmodded.config.CanyonConfig.maxOutstandingChunks);
 +    // Canyon end
      public Set playerChunkCoordIntPairs = new HashSet();
      private int bL = -99999999;
      private int bM = 60;
-@@ -205,7 +215,10 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+@@ -206,7 +217,10 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
          }
  
          if (flag && !this.chunkCoordIntPairQueue.isEmpty()) {
@@ -45,7 +46,7 @@ index c7fa3a18..3fc272a6 100644
  
              if (chunkcoordintpair != null) {
                  boolean flag1 = false;
-@@ -226,6 +239,8 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+@@ -227,6 +241,8 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
                      }
                  }
              }
@@ -54,24 +55,33 @@ index c7fa3a18..3fc272a6 100644
          }
  
          if (this.E) {
-@@ -267,6 +282,30 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+@@ -268,6 +284,39 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
          }
      }
  
 +    // Canyon Start
 +    public void sendQueuedChunks() {
-+        ChunkCoordIntPair chunkcoordintpair;
++        ChunkCoordIntPair loopingChunkcoordintpair;
 +        WorldServer worldserver = this.b.getWorldServer(this.dimension);
 +        boolean maySend = com.canyonmodded.config.CanyonConfig.useNewNetworkingStack ||
 +                this.netServerHandler.b() + ChunkCompressionThread.getPlayerQueueSize(this) < 4;
 +        if (maySend) {
-+            while ((chunkcoordintpair = this.chunkCoordIntPairQueue.poll()) != null) {
-+                this.netServerHandler.sendPacket(new Packet51MapChunk(chunkcoordintpair.x * 16, 0, chunkcoordintpair.z * 16, 16, 128, 16, worldserver));
-+                List list = worldserver.getTileEntities(chunkcoordintpair.x * 16, 0, chunkcoordintpair.z * 16, chunkcoordintpair.x * 16 + 16, 128, chunkcoordintpair.z * 16 + 16);
-+
-+                for (int j = 0; j < list.size(); ++j) {
-+                    this.a((TileEntity) list.get(j));
++            while ((loopingChunkcoordintpair = this.chunkCoordIntPairQueue.poll()) != null) {
++                if (!chunkSendSemaphore.tryAcquire()) {
++                    // resend at a later time
++                    this.chunkCoordIntPairQueue.add(loopingChunkcoordintpair);
++                    break;
 +                }
++                final ChunkCoordIntPair chunkcoordintpair = loopingChunkcoordintpair;
++                worldserver.chunkProviderServer.getChunkAtAsync(chunkcoordintpair.x, chunkcoordintpair.z).thenRun(() -> {
++                    this.netServerHandler.sendPacket(new Packet51MapChunk(chunkcoordintpair.x * 16, 0, chunkcoordintpair.z * 16, 16, 128, 16, worldserver));
++                    List list = worldserver.getTileEntities(chunkcoordintpair.x * 16, 0, chunkcoordintpair.z * 16, chunkcoordintpair.x * 16 + 16, 128, chunkcoordintpair.z * 16 + 16);
++
++                    for (int j = 0; j < list.size(); ++j) {
++                        this.a((TileEntity) list.get(j));
++                    }
++                    chunkSendSemaphore.release();
++                });
 +
 +                // Old networking stack can only do one chunk packet at a time
 +                if (!com.canyonmodded.config.CanyonConfig.useNewNetworkingStack) {
@@ -107,5 +117,5 @@ index 3dbb30d3..af7ff765 100644
          }
      }
 -- 
-2.25.1
+2.25.2
 

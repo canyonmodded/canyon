@@ -1,4 +1,4 @@
-From 404cf01adeadfc57d430ee23ba8cd53f091bfff0 Mon Sep 17 00:00:00 2001
+From 891f25e384c0c1afdcbae8f6aa0041ca9e13f2ec Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 19 Mar 2020 04:32:11 -0400
 Subject: [PATCH] Allow delaying chunk unloading
@@ -49,10 +49,10 @@ index f7f5257e..e26c211d 100644
                </artifactSet>
              </configuration>
 diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
-index 51d00762..f41ab3d9 100644
+index fa641f27..b575f54b 100644
 --- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
 +++ b/src/main/java/com/canyonmodded/config/CanyonConfig.java
-@@ -11,6 +11,7 @@ public class CanyonConfig {
+@@ -12,6 +12,7 @@ public class CanyonConfig {
      public static int arrowDespawnRate = 1200;
      public static int itemDespawnRate = 6000;
      public static boolean randomizeInitialSpawn = true;
@@ -60,7 +60,7 @@ index 51d00762..f41ab3d9 100644
  
      public static void loadConfiguration(File file) {
          Configuration configuration = new Configuration(file);
-@@ -22,6 +23,7 @@ public class CanyonConfig {
+@@ -24,6 +25,7 @@ public class CanyonConfig {
          arrowDespawnRate = configuration.getInt("optimization.arrow-despawn-rate", arrowDespawnRate);
          itemDespawnRate = configuration.getInt("optimization.item-despawn-rate", itemDespawnRate);
          randomizeInitialSpawn = configuration.getBoolean("settings.randomize-initial-spawn", true);
@@ -142,5 +142,5 @@ index f3fc7d19..de15f8c3 100644
      }
  
 -- 
-2.25.1
+2.25.2
 
