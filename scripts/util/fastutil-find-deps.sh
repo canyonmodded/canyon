@@ -161,7 +161,7 @@ case "$command" in
 
   jar_name="$(basename ${dest_path})"
 
-  tmp_dir=$(mktemp -t -d "fastutil-min.XXXX")
+  tmp_dir=$(mktemp -d -t "fastutil-min.XXXX")
   trap "{ rm -rf \"${tmp_dir}\"; exit 255; }" EXIT
 
   ( >&2 echo "Resolving transitive dependencies" )
