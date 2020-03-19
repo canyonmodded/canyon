@@ -137,7 +137,7 @@ case "$command" in
 
   "minimize")
   shift
-  check_exec "zip" "unzip"
+  check_exec "jar"
 
   [ ${#} -ge 2 ] || invalid_argument
 
@@ -176,7 +176,7 @@ case "$command" in
   class_list=${class_list//\//.}
 
   if ! transitive_dependencies=$(cd ${tmp_dir} && jdeps -recursive -regex "$fastutil_regex" \
-    -verbose:class -cp "$jar_path" ${class_list} | awk '/      -> / { gsub(/\./, "/", $2) ".class"; print $2 ".class" }')\
+    -verbose:class -cp "$jar_path" ${class_list} | awk -F '->' '{ print $2 }' | awk '{ gsub(/\./, "/", $1); print $1 ".class" }')\
     || [ -z "$transitive_dependencies" ]
   then
     >&2 echo "Could not resolve dependencies with $jar_path - probably not a complete fastutil jar."
@@ -185,12 +185,21 @@ case "$command" in
 
   dependencies=( ${class_paths[@]} ${transitive_dependencies[@]} )
   ( >&2 echo "Unpacking jar from $jar_path" )
-  if ! output=$(unzip -q "$jar_path" "META-INF/*" $(printf '%s\n' "${dependencies[@]}" | sort | uniq) -d "$tmp_dir" 2>&1); then
+
+  tmp_classnames_file=$(mktemp -p $tmp_dir -t "fastutil-min-classes.XXXX")
+  if ! (printf '%s\n' "${dependencies[@]}" | sort | uniq > $tmp_classnames_file); then
+    >&2 echo "Error: $output"; exit 1
+  fi
+
+  if ! output=$(cd "$tmp_dir" && jar xf "$jar_path" "@$tmp_classnames_file" 2>&1); then
     >&2 echo "Error: $output"; exit 1
   fi
 
   ( >&2 echo "Creating minimized jar at $dest_path" )
-  if ! output=$(cd "$tmp_dir" && zip -9 -q -r "$dest_path" "it" "META-INF" 2>&1); then
+  if ! output=$(cd "$tmp_dir" && jar cf "$dest_path" -C "$tmp_dir" "@$tmp_classnames_file" 2>&1); then
+    echo $tmp_classnames_file
+    echo "jar cf "$dest_path" -C "$tmp_dir" "@$tmp_classnames_file""
+    bash
     >&2 echo "Error: $output"; exit 1
   fi
   ;;
