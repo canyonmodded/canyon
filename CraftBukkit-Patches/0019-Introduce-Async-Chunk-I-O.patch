@@ -1,4 +1,4 @@
-From 5eaae68530fb004584143f96278f7027e47a48a0 Mon Sep 17 00:00:00 2001
+From b9b3a90b1f26fd86baf99d396218a71fc7a7e9b3 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 5 Oct 2019 03:08:44 -0400
 Subject: [PATCH] Introduce Async Chunk I/O
@@ -11,10 +11,30 @@ to the rest of the server as possible, whilst leveraging async chunk
 loading in places where it is most likely to help.
 
 diff --git a/src/main/java/net/minecraft/server/ChunkProviderServer.java b/src/main/java/net/minecraft/server/ChunkProviderServer.java
-index 0b232fd1..b39098b4 100644
+index 0b232fd1..5069ae79 100644
 --- a/src/main/java/net/minecraft/server/ChunkProviderServer.java
 +++ b/src/main/java/net/minecraft/server/ChunkProviderServer.java
-@@ -21,6 +21,16 @@ import org.bukkit.generator.BlockPopulator;
+@@ -1,18 +1,13 @@
+ package net.minecraft.server;
+ 
+-import java.io.IOException;
+ import java.util.ArrayList;
+-import java.util.HashMap;
+-import java.util.HashSet;
+ import java.util.List;
+-import java.util.Map;
+-import java.util.Set;
+ 
+ // CraftBukkit start
+ import java.util.Random;
+ import org.bukkit.craftbukkit.CraftChunk;
++import org.bukkit.craftbukkit.util.LongHash;
+ import org.bukkit.craftbukkit.util.LongHashset;
+-import org.bukkit.craftbukkit.util.LongHashtable;
+ import org.bukkit.event.world.ChunkLoadEvent;
+ import org.bukkit.event.world.ChunkPopulateEvent;
+ import org.bukkit.event.world.ChunkUnloadEvent;
+@@ -21,13 +16,23 @@ import org.bukkit.generator.BlockPopulator;
  
  public class ChunkProviderServer implements IChunkProvider {
  
@@ -25,20 +45,37 @@ index 0b232fd1..b39098b4 100644
 +            Integer.MAX_VALUE, java.util.concurrent.TimeUnit.SECONDS,
 +            new java.util.concurrent.PriorityBlockingQueue<>(),
 +            new com.canyonmodded.util.SimpleDaemonThreadFactory("Async Chunk I/O #%d"));
-+    private LongHashtable<ChunkLoadTask> loadQueue = new LongHashtable<>();
++    private io.netty.util.collection.LongObjectMap<ChunkLoadTask> loadQueue = new io.netty.util.collection.LongObjectHashMap<>();
 +    // Canyon end
 +
      // CraftBukkit start
      public LongHashset unloadQueue = new LongHashset();
      public Chunk emptyChunk;
-@@ -54,29 +64,53 @@ public class ChunkProviderServer implements IChunkProvider {
+     public IChunkProvider chunkProvider; // CraftBukkit
+     private IChunkLoader e;
+     public boolean forceChunkLoad = false;
+-    public LongHashtable<Chunk> chunks = new LongHashtable<Chunk>();
++    public io.netty.util.collection.LongObjectMap<Chunk> chunks = new io.netty.util.collection.LongObjectHashMap<>(); // Canyon - remove use of CB LongHashtable
+     public List chunkList = new ArrayList();
+     public WorldServer world;
+     // CraftBukkit end
+@@ -40,7 +45,7 @@ public class ChunkProviderServer implements IChunkProvider {
+     }
+ 
+     public boolean isChunkLoaded(int i, int j) {
+-        return this.chunks.containsKey(i, j); // CraftBukkit
++        return this.chunks.containsKey(LongHash.toLong(i, j)); // CraftBukkit
+     }
+ 
+     public void queueUnload(int i, int j) {
+@@ -54,29 +59,70 @@ public class ChunkProviderServer implements IChunkProvider {
          }
      }
  
 -    public Chunk getChunkAt(int i, int j) {
 +    // Canyon start
 +    public Chunk getChunkIfLoaded(int x, int z) {
-+        return this.chunks.get(x, z);
++        return this.chunks.get(LongHash.toLong(x, z));
 +    }
 +
 +    // Please note: this method has to be called in the main thread, but its result is emitted near-asynchronously
@@ -46,10 +83,14 @@ index 0b232fd1..b39098b4 100644
 +        return getChunkAtAsync(i, j, false);
 +    }
 +    public java.util.concurrent.CompletableFuture<Chunk> getChunkAtAsync(int i, int j, boolean immediate) {
++        return getChunkAtAsync(i, j, immediate, true);
++    }
++    public java.util.concurrent.CompletableFuture<Chunk> getChunkAtAsync(int i, int j, boolean immediate, boolean generate) {
          // CraftBukkit start
          this.unloadQueue.remove(i, j);
-         Chunk chunk = (Chunk) this.chunks.get(i, j);
+-        Chunk chunk = (Chunk) this.chunks.get(i, j);
 -        boolean newChunk = false;
++        Chunk chunk = (Chunk) this.chunks.get(LongHash.toLong(i, j));
 +        //boolean newChunk = false; // Canyon - move
          // CraftBukkit end
  
@@ -63,15 +104,29 @@ index 0b232fd1..b39098b4 100644
 +                MinecraftServer.log.warning("SYNC CHUNK LOAD REQUEST @ " + i + "," + j);
 +                new Throwable().printStackTrace();
 +            }
-+            return this.requestChunkLoad(i, j, immediate);
++            return this.requestChunkLoad(i, j, immediate, generate);
 +        }
 +    }
 +
-+    private Chunk postLoadTask(Chunk loadedChunk, int i, int j) {
-+        // If the chunk is now loaded, just return the already existing chunk
-+        if (this.chunks.containsKey(i, j)) {
-+            return this.chunks.get(i, j);
++    public Chunk regenerateChunk(int x, int z) {
++        this.unloadQueue.remove(x, z);
++
++        Chunk newChunk;
++        if (world.chunkProviderServer.chunkProvider == null) {
++            newChunk = world.chunkProviderServer.emptyChunk;
++        } else {
++            newChunk = world.chunkProviderServer.chunkProvider.getOrCreateChunk(x, z);
 +        }
++        return this.postLoadTask(newChunk, x, z, true);
++    }
++
++    private Chunk postLoadTask(Chunk loadedChunk, int i, int j, boolean generate) {
++        // If the chunk is now loaded, just return the already existing chunk
++        if (this.chunks.containsKey(LongHash.toLong(i, j))) {
++            return this.chunks.get(LongHash.toLong(i, j));
++        }
++
++        if (!generate && loadedChunk == null) return null;
 +            boolean newChunk = false;
 +            if (loadedChunk == null) {
                  if (this.chunkProvider == null) {
@@ -89,7 +144,7 @@ index 0b232fd1..b39098b4 100644
 -            if (chunk != null) {
 -                chunk.loadNOP();
 -                chunk.addEntities();
-+            this.chunks.put(i, j, loadedChunk); // CraftBukkit
++            this.chunks.put(LongHash.toLong(i, j), loadedChunk); // CraftBukkit
 +            this.chunkList.add(loadedChunk);
 +            if (loadedChunk != null) {
 +                loadedChunk.loadNOP();
@@ -97,7 +152,7 @@ index 0b232fd1..b39098b4 100644
              }
  
              // CraftBukkit start
-@@ -87,48 +121,62 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -87,48 +133,62 @@ public class ChunkProviderServer implements IChunkProvider {
                   * the World constructor. We can't reliably alter that, so we have
                   * no way of creating a CraftWorld/CraftServer at that point.
                   */
@@ -133,13 +188,13 @@ index 0b232fd1..b39098b4 100644
 +
 +    }
 +    public Chunk getChunkAt(int i, int j) {
-+        Chunk chunk = this.chunks.get(i, j);
++        Chunk chunk = this.chunks.get(LongHash.toLong(i, j));
 +        if (chunk != null) return chunk;
 +
 +        // Someone is going to block until we are done, so we need to do any post-init stuff after the load task completes
 +        java.util.concurrent.CompletableFuture<Chunk> future = this.getChunkAtAsync(i, j, true);
 +        try {
-+            return postLoadTask(future.get(), i, j);
++            return postLoadTask(future.get(), i, j, true);
 +        } catch (InterruptedException | java.util.concurrent.ExecutionException ex) {
 +            ex.printStackTrace();
 +            return null;
@@ -171,7 +226,7 @@ index 0b232fd1..b39098b4 100644
 +    // Canyon start
      public Chunk loadChunk(int i, int j) { // CraftBukkit - private -> public
 +        try {
-+            return this.requestChunkLoad(i, j, true).get();
++            return this.requestChunkLoad(i, j, true, false).get();
 +        } catch (InterruptedException | java.util.concurrent.ExecutionException ex) {
 +            throw new RuntimeException(ex);
 +        }
@@ -180,15 +235,25 @@ index 0b232fd1..b39098b4 100644
          if (this.e == null) {
              return null;
          } else {
-@@ -146,6 +194,7 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -146,6 +206,17 @@ public class ChunkProviderServer implements IChunkProvider {
              }
          }
      }
++    public void unloadChunk(Chunk chunk, boolean save) {
++        if (save && !chunk.isEmpty()) {
++            chunk.removeEntities();
++            this.saveChunk(chunk);
++            this.saveChunkNOP(chunk);
++        }
++        this.unloadQueue.remove(chunk.x, chunk.z);
++        this.chunks.remove(LongHash.toLong(chunk.x, chunk.z)); // CraftBukkit
++        this.chunkList.remove(chunk);
++    }
 +    // Canyon end
  
      public void saveChunkNOP(Chunk chunk) { // CraftBukkit - private -> public
          if (this.e != null) {
-@@ -170,7 +219,6 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -170,7 +241,6 @@ public class ChunkProviderServer implements IChunkProvider {
  
      public void getChunkAt(IChunkProvider ichunkprovider, int i, int j) {
          Chunk chunk = this.getOrCreateChunk(i, j);
@@ -196,32 +261,28 @@ index 0b232fd1..b39098b4 100644
          if (!chunk.done) {
              chunk.done = true;
              if (this.chunkProvider != null) {
-@@ -265,4 +313,64 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -265,4 +335,74 @@ public class ChunkProviderServer implements IChunkProvider {
      public boolean canSave() {
          return !this.world.canSave;
      }
 +
 +    // Canyon Start - async load process
-+    private java.util.concurrent.CompletableFuture<Chunk> requestChunkLoad(int x, int z, boolean immediate) {
++    private java.util.concurrent.CompletableFuture<Chunk> requestChunkLoad(int x, int z, boolean immediate, boolean generate) {
 +        if (this.world.server == null) {
 +            // The server is not yet available, so do everything sync for now
 +            Chunk loaded = realLoadChunk(x, z);
-+            Chunk processed = this.postLoadTask(loaded, x, z);
++            Chunk processed = this.postLoadTask(loaded, x, z, generate);
 +            return java.util.concurrent.CompletableFuture.completedFuture(processed);
 +        }
 +
-+        ChunkLoadTask task = this.loadQueue.get(x, z);
++        ChunkLoadTask task = this.loadQueue.get(LongHash.toLong(x, z));
 +        if (task == null) {
 +            task = new ChunkLoadTask(x, z);
-+            this.loadQueue.put(x, z, task);
-+            if (immediate) {
-+                task.toggleNeededImmediately();
-+            }
++            this.loadQueue.put(LongHash.toLong(x, z), task);
++            configureChunkLoadTask(task, immediate, generate);
 +            CHUNK_SERVICE.execute(task);
 +        } else {
-+            if (immediate) {
-+                task.toggleNeededImmediately();
-+            }
++            configureChunkLoadTask(task, immediate, generate);
 +        }
 +
 +        if (immediate) {
@@ -231,19 +292,33 @@ index 0b232fd1..b39098b4 100644
 +        }
 +    }
 +
++    private void configureChunkLoadTask(ChunkLoadTask task, boolean immediate, boolean generate) {
++        if (immediate) {
++            task.needImmediately();
++        }
++        if (generate) {
++            task.mustGenerate();
++        }
++    }
++
 +    private class ChunkLoadTask implements Runnable, Comparable<ChunkLoadTask> {
 +        private final int x;
 +        private final int z;
 +        private final java.util.concurrent.atomic.AtomicBoolean neededImmediately = new java.util.concurrent.atomic.AtomicBoolean(false);
 +        private final java.util.concurrent.CompletableFuture<Chunk> immediate = new java.util.concurrent.CompletableFuture<>();
 +        private final java.util.concurrent.CompletableFuture<Chunk> result = new java.util.concurrent.CompletableFuture<>();
++        private final java.util.concurrent.atomic.AtomicBoolean generate = new java.util.concurrent.atomic.AtomicBoolean(false);
 +
 +        private ChunkLoadTask(int x, int z) {
 +            this.x = x;
 +            this.z = z;
 +        }
 +
-+        void toggleNeededImmediately() {
++        void mustGenerate() {
++            generate.set(true);
++        }
++
++        void needImmediately() {
 +            neededImmediately.set(true);
 +        }
 +
@@ -251,7 +326,7 @@ index 0b232fd1..b39098b4 100644
 +        public void run() {
 +            Chunk loaded = realLoadChunk(x, z);
 +            immediate.complete(loaded);
-+            world.server.queueTask(() -> result.complete(ChunkProviderServer.this.postLoadTask(loaded, x, z)));
++            world.server.queueTask(() -> result.complete(ChunkProviderServer.this.postLoadTask(loaded, x, z, generate.get())));
 +        }
 +
 +        @Override
@@ -402,23 +477,187 @@ index 981f058a..30d058a0 100644
      }
  
 diff --git a/src/main/java/org/bukkit/craftbukkit/CraftWorld.java b/src/main/java/org/bukkit/craftbukkit/CraftWorld.java
-index 0faf610e..c51e06fb 100644
+index 0faf610e..f7509ac7 100644
 --- a/src/main/java/org/bukkit/craftbukkit/CraftWorld.java
 +++ b/src/main/java/org/bukkit/craftbukkit/CraftWorld.java
-@@ -583,6 +583,13 @@ public class CraftWorld implements World {
+@@ -153,16 +153,18 @@ public class CraftWorld implements World {
+ 
+         net.minecraft.server.Chunk chunk = world.chunkProviderServer.getOrCreateChunk(x, z);
+ 
+-        if (save && !chunk.isEmpty()) {
+-            chunk.removeEntities();
+-            world.chunkProviderServer.saveChunk(chunk);
+-            world.chunkProviderServer.saveChunkNOP(chunk);
+-        }
++        // Canyon Start
++//        if (save && !chunk.isEmpty()) {
++//            chunk.removeEntities();
++//            world.chunkProviderServer.saveChunk(chunk);
++//            world.chunkProviderServer.saveChunkNOP(chunk);
++//        }
+ 
+         preserveChunk((CraftChunk) chunk.bukkitChunk);
+-        world.chunkProviderServer.unloadQueue.remove(x, z);
+-        world.chunkProviderServer.chunks.remove(x, z);
+-        world.chunkProviderServer.chunkList.remove(chunk);
++//        world.chunkProviderServer.unloadQueue.remove(x, z);
++//        world.chunkProviderServer.chunks.remove(org.bukkit.craftbukkit.util.LongHash.toLong(x, z)); // Canyon
++//        world.chunkProviderServer.chunkList.remove(chunk);
++        world.chunkProviderServer.unloadChunk(chunk, save);
+ 
+         return true;
+     }
+@@ -170,17 +172,19 @@ public class CraftWorld implements World {
+     public boolean regenerateChunk(int x, int z) {
+         unloadChunk(x, z, false, false);
+ 
+-        world.chunkProviderServer.unloadQueue.remove(x, z);
+-
+-        net.minecraft.server.Chunk chunk = null;
+-
+-        if (world.chunkProviderServer.chunkProvider == null) {
+-            chunk = world.chunkProviderServer.emptyChunk;
+-        } else {
+-            chunk = world.chunkProviderServer.chunkProvider.getOrCreateChunk(x, z);
+-        }
+-
+-        chunkLoadPostProcess(chunk, x, z);
++        // Canyon start - moved logic into ChunkProviderServer
++//        world.chunkProviderServer.unloadQueue.remove(x, z);
++//
++//        net.minecraft.server.Chunk chunk = null;
++//
++//        if (world.chunkProviderServer.chunkProvider == null) {
++//            chunk = world.chunkProviderServer.emptyChunk;
++//        } else {
++//            chunk = world.chunkProviderServer.chunkProvider.getOrCreateChunk(x, z);
++//        }
++//
++//        chunkLoadPostProcess(chunk, x, z);
++        Chunk chunk = world.chunkProviderServer.regenerateChunk(x, z).bukkitChunk;
+ 
+         refreshChunk(x, z);
+ 
+@@ -234,43 +238,50 @@ public class CraftWorld implements World {
+             return world.chunkProviderServer.getChunkAt(x, z) != null;
+         }
+ 
+-        world.chunkProviderServer.unloadQueue.remove(x, z);
+-        net.minecraft.server.Chunk chunk = (net.minecraft.server.Chunk) world.chunkProviderServer.chunks.get(x, z);
+-
+-        if (chunk == null) {
+-            chunk = world.chunkProviderServer.loadChunk(x, z);
+-
+-            chunkLoadPostProcess(chunk, x, z);
++        // Canyon Start - logic now handled in ChunkProviderServer
++//        world.chunkProviderServer.unloadQueue.remove(x, z);
++//        net.minecraft.server.Chunk chunk = (net.minecraft.server.Chunk) world.chunkProviderServer.chunks.get(x, z);
++//
++//        if (chunk == null) {
++//            chunk = world.chunkProviderServer.loadChunk(x, z);
++//
++//            chunkLoadPostProcess(chunk, x, z);
++//        }
++//        return chunk != null;
++        try {
++            return world.chunkProviderServer.getChunkAtAsync(x, z, true, generate).get() != null;
++        } catch (java.util.concurrent.ExecutionException | java.lang.InterruptedException e) {
++            throw new RuntimeException("Could not request chunk at " + x + "," + z, e.getCause());
+         }
+-        return chunk != null;
+     }
+ 
+-    @SuppressWarnings("unchecked")
+-    private void chunkLoadPostProcess(net.minecraft.server.Chunk chunk, int x, int z) {
+-        if (chunk != null) {
+-            world.chunkProviderServer.chunks.put(x, z, chunk);
+-            world.chunkProviderServer.chunkList.add(chunk);
+-
+-            chunk.loadNOP();
+-            chunk.addEntities();
+-
+-            if (!chunk.done && world.chunkProviderServer.isChunkLoaded(x + 1, z + 1) && world.chunkProviderServer.isChunkLoaded(x, z + 1) && world.chunkProviderServer.isChunkLoaded(x + 1, z)) {
+-                world.chunkProviderServer.getChunkAt(world.chunkProviderServer, x, z);
+-            }
+-
+-            if (world.chunkProviderServer.isChunkLoaded(x - 1, z) && !world.chunkProviderServer.getOrCreateChunk(x - 1, z).done && world.chunkProviderServer.isChunkLoaded(x - 1, z + 1) && world.chunkProviderServer.isChunkLoaded(x, z + 1) && world.chunkProviderServer.isChunkLoaded(x - 1, z)) {
+-                world.chunkProviderServer.getChunkAt(world.chunkProviderServer, x - 1, z);
+-            }
+-
+-            if (world.chunkProviderServer.isChunkLoaded(x, z - 1) && !world.chunkProviderServer.getOrCreateChunk(x, z - 1).done && world.chunkProviderServer.isChunkLoaded(x + 1, z - 1) && world.chunkProviderServer.isChunkLoaded(x, z - 1) && world.chunkProviderServer.isChunkLoaded(x + 1, z)) {
+-                world.chunkProviderServer.getChunkAt(world.chunkProviderServer, x, z - 1);
+-            }
+-
+-            if (world.chunkProviderServer.isChunkLoaded(x - 1, z - 1) && !world.chunkProviderServer.getOrCreateChunk(x - 1, z - 1).done && world.chunkProviderServer.isChunkLoaded(x - 1, z - 1) && world.chunkProviderServer.isChunkLoaded(x, z - 1) && world.chunkProviderServer.isChunkLoaded(x - 1, z)) {
+-                world.chunkProviderServer.getChunkAt(world.chunkProviderServer, x - 1, z - 1);
+-            }
+-        }
+-    }
++//    @SuppressWarnings("unchecked")
++//    private void chunkLoadPostProcess(net.minecraft.server.Chunk chunk, int x, int z) {
++//        if (chunk != null) {
++//            world.chunkProviderServer.chunks.put(x, z, chunk);
++//            world.chunkProviderServer.chunkList.add(chunk);
++//
++//            chunk.loadNOP();
++//            chunk.addEntities();
++//
++//            if (!chunk.done && world.chunkProviderServer.isChunkLoaded(x + 1, z + 1) && world.chunkProviderServer.isChunkLoaded(x, z + 1) && world.chunkProviderServer.isChunkLoaded(x + 1, z)) {
++//                world.chunkProviderServer.getChunkAt(world.chunkProviderServer, x, z);
++//            }
++//
++//            if (world.chunkProviderServer.isChunkLoaded(x - 1, z) && !world.chunkProviderServer.getOrCreateChunk(x - 1, z).done && world.chunkProviderServer.isChunkLoaded(x - 1, z + 1) && world.chunkProviderServer.isChunkLoaded(x, z + 1) && world.chunkProviderServer.isChunkLoaded(x - 1, z)) {
++//                world.chunkProviderServer.getChunkAt(world.chunkProviderServer, x - 1, z);
++//            }
++//
++//            if (world.chunkProviderServer.isChunkLoaded(x, z - 1) && !world.chunkProviderServer.getOrCreateChunk(x, z - 1).done && world.chunkProviderServer.isChunkLoaded(x + 1, z - 1) && world.chunkProviderServer.isChunkLoaded(x, z - 1) && world.chunkProviderServer.isChunkLoaded(x + 1, z)) {
++//                world.chunkProviderServer.getChunkAt(world.chunkProviderServer, x, z - 1);
++//            }
++//
++//            if (world.chunkProviderServer.isChunkLoaded(x - 1, z - 1) && !world.chunkProviderServer.getOrCreateChunk(x - 1, z - 1).done && world.chunkProviderServer.isChunkLoaded(x - 1, z - 1) && world.chunkProviderServer.isChunkLoaded(x, z - 1) && world.chunkProviderServer.isChunkLoaded(x - 1, z)) {
++//                world.chunkProviderServer.getChunkAt(world.chunkProviderServer, x - 1, z - 1);
++//            }
++//        }
++//    }
++    // Canyon End
+ 
+     public boolean isChunkLoaded(Chunk chunk) {
+         return isChunkLoaded(chunk.getX(), chunk.getZ());
+@@ -583,6 +594,18 @@ public class CraftWorld implements World {
          world.canSave = !value;
      }
  
 +    // Canyon Start
 +    @Override
 +    public java.util.concurrent.CompletableFuture<Chunk> getChunkAtAsync(int x, int z) {
-+        return this.world.chunkProviderServer.getChunkAtAsync(x, z).thenApply(chunk -> chunk.bukkitChunk);
++        return this.getChunkAtAsync(x, z, true);
++    }
++
++    @Override
++    public java.util.concurrent.CompletableFuture<Chunk> getChunkAtAsync(int x, int z, boolean gen) {
++        return this.world.chunkProviderServer.getChunkAtAsync(x, z, false, gen).thenApply(chunk -> chunk.bukkitChunk);
 +    }
 +    // Canyon End
 +
      public boolean hasStorm() {
          return world.worldData.hasStorm();
      }
+diff --git a/src/main/java/org/bukkit/craftbukkit/util/LongHash.java b/src/main/java/org/bukkit/craftbukkit/util/LongHash.java
+index f3fc7d19..d26e090c 100644
+--- a/src/main/java/org/bukkit/craftbukkit/util/LongHash.java
++++ b/src/main/java/org/bukkit/craftbukkit/util/LongHash.java
+@@ -10,9 +10,9 @@ package org.bukkit.craftbukkit.util;
+  * @author Nathan
+  */
+ public abstract class LongHash {
+-    static long toLong(int msw, int lsw) {
++    public static long toLong(int msw, int lsw) {
+         return ((long) msw << 32) + lsw - Integer.MIN_VALUE;
+-    }
++    } // Canyon
+ 
+     static int msw(long l) {
+         return (int) (l >> 32);
 -- 
 2.25.1
 
