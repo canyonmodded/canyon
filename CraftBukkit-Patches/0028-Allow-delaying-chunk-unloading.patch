@@ -1,4 +1,4 @@
-From 87224b4b2d88a10accc5afea84977ffcbd2118dc Mon Sep 17 00:00:00 2001
+From 404cf01adeadfc57d430ee23ba8cd53f091bfff0 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 19 Mar 2020 04:32:11 -0400
 Subject: [PATCH] Allow delaying chunk unloading
@@ -69,7 +69,7 @@ index 51d00762..f41ab3d9 100644
          configuration.save();
      }
 diff --git a/src/main/java/net/minecraft/server/ChunkProviderServer.java b/src/main/java/net/minecraft/server/ChunkProviderServer.java
-index b39098b4..896e119b 100644
+index b39098b4..24cd96e0 100644
 --- a/src/main/java/net/minecraft/server/ChunkProviderServer.java
 +++ b/src/main/java/net/minecraft/server/ChunkProviderServer.java
 @@ -11,6 +11,7 @@ import java.util.Set;
@@ -94,10 +94,10 @@ index b39098b4..896e119b 100644
  
          if (k < -short1 || k > short1 || l < -short1 || l > short1 || !(this.world.keepSpawnInMemory)) { // CraftBukkit - added 'this.world.keepSpawnInMemory'
 -            this.unloadQueue.add(i, j); // CraftBukkit
-+            System.out.println("Queuing unload of " + i + "," + j);
++            // Canyon Start
 +            long targetUnload = MinecraftServer.currentTick + com.canyonmodded.config.CanyonConfig.unloadInactiveChunksAfter;
 +            this.unloadQueue.put(LongHash.toLong(i, j), targetUnload); // CraftBukkit
-+            System.out.println("Due: " + targetUnload + ", stored: " + this.unloadQueue.get(LongHash.toLong(i, j)));
++            // Canyon End
          }
      }
  
