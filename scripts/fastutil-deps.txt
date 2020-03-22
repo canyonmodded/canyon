@@ -1,4 +1,0 @@
-it/unimi/dsi/fastutil/longs/Long2LongMap.class
-it/unimi/dsi/fastutil/longs/Long2LongOpenHashMap.class
-it/unimi/dsi/fastutil/longs/LongIterator.class
-it/unimi/dsi/fastutil/longs/LongSet.class
