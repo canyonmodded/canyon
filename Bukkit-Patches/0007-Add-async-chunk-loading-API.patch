@@ -1,4 +1,4 @@
-From f17c4dfd40a71c8033b3f2cd92d21ab15c26ec23 Mon Sep 17 00:00:00 2001
+From f5e8af0db06584207011a6bbe99a0b884118f551 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Fri, 13 Mar 2020 01:19:14 -0400
 Subject: [PATCH] Add async chunk loading API
@@ -7,13 +7,14 @@ Mostly compatible with the Paper API, except generation can not
 be triggered.
 
 diff --git a/src/main/java/org/bukkit/World.java b/src/main/java/org/bukkit/World.java
-index c46e963a..eedecbfb 100644
+index c8f5ea5c..50063fd8 100644
 --- a/src/main/java/org/bukkit/World.java
 +++ b/src/main/java/org/bukkit/World.java
-@@ -714,6 +714,261 @@ public interface World {
+@@ -728,6 +728,260 @@ public interface World {
+      * @return The difficulty of the world.
       */
-     public void setAutoSave(boolean value);
- 
+     public Difficulty getDifficulty();
++
 +    // Canyon Start
 +    /**
 +     * Requests a {@link Chunk} to be loaded at the given coordinates
@@ -267,11 +268,9 @@ index c46e963a..eedecbfb 100644
 +    public default java.util.concurrent.CompletableFuture<Chunk> getChunkAtAsync(int x, int z, boolean gen) {
 +        return getChunkAtAsync(x, z);
 +    }
-+    // Canyon end
-+
+     // Canyon end
+ 
      /**
-      * Represents various map environment types that a world may be
-      */
 diff --git a/src/main/java/org/bukkit/entity/Entity.java b/src/main/java/org/bukkit/entity/Entity.java
 index 6ae2a782..224452d2 100644
 --- a/src/main/java/org/bukkit/entity/Entity.java
@@ -297,5 +296,5 @@ index 6ae2a782..224452d2 100644
       * Returns a list of entities within a bounding box defined by x,y,z centered around player
       *
 -- 
-2.25.1
+2.26.2
 

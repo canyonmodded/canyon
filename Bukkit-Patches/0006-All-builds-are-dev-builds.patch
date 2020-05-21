@@ -1,4 +1,4 @@
-From 621b66cf0fe589e8ace71c66d4ebeb2c142af096 Mon Sep 17 00:00:00 2001
+From aba081238415cf0b03d76adb364fbf72e5528e5b Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 12 Mar 2020 20:40:58 -0400
 Subject: [PATCH] All builds are dev builds
@@ -18,5 +18,5 @@ index bb804a19..d780cfc9 100644
              StringBuilder name = new StringBuilder();
  
 -- 
-2.25.1
+2.26.2
 

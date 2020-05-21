@@ -1,4 +1,4 @@
-From 57ace1bd99287a3fc0741a3e78bca70ebff06caf Mon Sep 17 00:00:00 2001
+From 56c068e22259361b8a2dcd89da5840cc0950b643 Mon Sep 17 00:00:00 2001
 From: mintoyatsu <53593903+mintoyatsu@users.noreply.github.com>
 Date: Tue, 10 Mar 2020 04:06:11 -0700
 Subject: [PATCH] Server difficulty API
@@ -100,5 +100,5 @@ index c46e963a..c8f5ea5c 100644
       * Represents various map environment types that a world may be
       */
 -- 
-2.25.1.windows.1
+2.26.2
 

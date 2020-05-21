@@ -1,4 +1,4 @@
-From 051ffff3e071976f75b039652fb5aa7b2670e81d Mon Sep 17 00:00:00 2001
+From 0b262d88eb8a65678834a42558d6c29ebfe523cd Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Fri, 13 Mar 2020 02:49:01 -0400
 Subject: [PATCH] Add Bukkit#getConsoleSender()
@@ -37,5 +37,5 @@ index 8b21ad20..dbea05bc 100644
 +    // Canyon end
  }
 -- 
-2.25.1
+2.26.2
 
