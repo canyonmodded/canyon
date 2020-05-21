@@ -2,6 +2,7 @@ build/tools
 build/remapped-1.7.3.jar
 Canyon-API
 Canyon-Server
+Canyon-MinFastUtil/target
 run/
 
 # Compiled class file
@@ -38,3 +39,4 @@ target/
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 
+test-server

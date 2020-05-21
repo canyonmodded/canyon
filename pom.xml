@@ -14,5 +14,6 @@
     <modules>
         <module>Canyon-API</module>
         <module>Canyon-Server</module>
+        <module>Canyon-MinFastUtil</module>
     </modules>
 </project>
