@@ -1,7 +1,7 @@
-From 32edba9bbbc4cba9787e0585a5ea9071ea11b725 Mon Sep 17 00:00:00 2001
+From 49068fe4c5f01ff0b806c05f3a875f5a0eae57b8 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
-Subject: [PATCH] Exprimental new networking stack
+Subject: [PATCH] Experimental new networking stack
 
 This patch adds an experimental networking stack to Canyon, based on
 Netty (the de facto networking library for Java). Netty is proven, and
@@ -13,6 +13,36 @@ However, the implementation makes no attempt to support plugins that
 modify the packet reader and writer to manipulate packets. An alternative
 API may be provided in the future.
 
+diff --git a/pom.xml b/pom.xml
+index 033f5b07..1c3b2552 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -79,14 +79,14 @@
+     <dependency>
+       <groupId>io.netty</groupId>
+       <artifactId>netty-handler</artifactId>
+-      <version>4.1.38.Final</version>
++      <version>4.1.49.Final</version>
+       <type>jar</type>
+       <scope>compile</scope>
+     </dependency>
+     <dependency>
+       <groupId>io.netty</groupId>
+       <artifactId>netty-transport-native-epoll</artifactId>
+-      <version>4.1.38.Final</version>
++      <version>4.1.49.Final</version>
+       <type>jar</type>
+       <scope>compile</scope>
+       <classifier>linux-x86_64</classifier>
+@@ -94,7 +94,7 @@
+     <dependency>
+       <groupId>io.netty</groupId>
+       <artifactId>netty-transport-native-kqueue</artifactId>
+-      <version>4.1.38.Final</version>
++      <version>4.1.49.Final</version>
+       <type>jar</type>
+       <scope>compile</scope>
+       <classifier>osx-x86_64</classifier>
 diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
 index d7dffe62..971ac06c 100644
 --- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
@@ -748,5 +778,5 @@ index d9ff03f4..310d022e 100644
  
                  if (event.getResult() != PlayerPreLoginEvent.Result.ALLOWED) {
 -- 
-2.25.1
+2.26.2
 
