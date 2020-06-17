@@ -67,8 +67,7 @@ case "$1" in
     ;;
     *)
         echo "Canyon build tool command. This provides a variety of commands to build and manage the Canyon build"
-        echo "environment. For all of the functionality of this command to be available, you must first run the"
-        echo "'setup' command. View below for details. For essential building and patching, you do not need to do the setup."
+        echo "environment."
         echo ""
         echo " Normal commands:"
         echo "  * rb, rebuild       | Rebuild patches, can be called from anywhere."
