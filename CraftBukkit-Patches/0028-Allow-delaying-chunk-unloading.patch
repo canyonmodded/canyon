@@ -1,4 +1,4 @@
-From 7683a5ab540fa44395fdc8d85356c25e741184ed Mon Sep 17 00:00:00 2001
+From 17ea0f871be28afd48f94637aec99a98c18e5db7 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 19 Mar 2020 04:32:11 -0400
 Subject: [PATCH] Allow delaying chunk unloading
@@ -48,10 +48,10 @@ index bc115871..0760f87c 100644
          </executions>
        </plugin>
 diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
-index fa641f27..b575f54b 100644
+index b8f897f3..de27ef58 100644
 --- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
 +++ b/src/main/java/com/canyonmodded/config/CanyonConfig.java
-@@ -12,6 +12,7 @@ public class CanyonConfig {
+@@ -13,6 +13,7 @@ public class CanyonConfig {
      public static int arrowDespawnRate = 1200;
      public static int itemDespawnRate = 6000;
      public static boolean randomizeInitialSpawn = true;
@@ -59,7 +59,7 @@ index fa641f27..b575f54b 100644
  
      public static void loadConfiguration(File file) {
          Configuration configuration = new Configuration(file);
-@@ -24,6 +25,7 @@ public class CanyonConfig {
+@@ -26,6 +27,7 @@ public class CanyonConfig {
          arrowDespawnRate = configuration.getInt("optimization.arrow-despawn-rate", arrowDespawnRate);
          itemDespawnRate = configuration.getInt("optimization.item-despawn-rate", itemDespawnRate);
          randomizeInitialSpawn = configuration.getBoolean("settings.randomize-initial-spawn", true);
@@ -68,7 +68,7 @@ index fa641f27..b575f54b 100644
          configuration.save();
      }
 diff --git a/src/main/java/net/minecraft/server/ChunkProviderServer.java b/src/main/java/net/minecraft/server/ChunkProviderServer.java
-index b39098b4..24cd96e0 100644
+index 7e849077..a343744b 100644
 --- a/src/main/java/net/minecraft/server/ChunkProviderServer.java
 +++ b/src/main/java/net/minecraft/server/ChunkProviderServer.java
 @@ -11,6 +11,7 @@ import java.util.Set;

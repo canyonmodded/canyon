@@ -1,4 +1,4 @@
-From 0664ee3a91854294531a659dfad371eda20016eb Mon Sep 17 00:00:00 2001
+From 4ffcffc8bf635f37bfd3a8f46bafd387b0629d26 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Tue, 8 Oct 2019 19:56:55 -0400
 Subject: [PATCH] Send queued chunk packets at opportune times
@@ -6,10 +6,10 @@ Subject: [PATCH] Send queued chunk packets at opportune times
 Fixes annoying post-login/teleport lag where you can get "stuck" in stone.
 
 diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
-index 51fe099e..889e498b 100644
+index f5aebd3e..7cc361f5 100644
 --- a/src/main/java/net/minecraft/server/EntityPlayer.java
 +++ b/src/main/java/net/minecraft/server/EntityPlayer.java
-@@ -113,6 +113,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+@@ -103,6 +103,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
  
      public void m_() {
          if (isRespawning) return; // Canyon
@@ -17,7 +17,7 @@ index 51fe099e..889e498b 100644
          this.itemInWorldManager.a();
          --this.bM;
          this.activeContainer.a();
-@@ -216,6 +217,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+@@ -206,6 +207,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
              }
          }
  
@@ -57,5 +57,5 @@ index 30d058a0..7ab9e275 100644
      }
  }
 -- 
-2.25.2
+2.26.2
 

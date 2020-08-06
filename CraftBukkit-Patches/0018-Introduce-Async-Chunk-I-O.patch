@@ -1,4 +1,4 @@
-From aabcb0519791710c8685b96fe625f3dab733447c Mon Sep 17 00:00:00 2001
+From 31c73446f1ab16eaf18fcc9de5c7b5fa74ff1218 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 5 Oct 2019 03:08:44 -0400
 Subject: [PATCH] Introduce Async Chunk I/O
@@ -10,8 +10,28 @@ This feature has been designed such that it will make as few changes
 to the rest of the server as possible, whilst leveraging async chunk
 loading in places where it is most likely to help.
 
+diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
+index 0e5b7a19..efaad611 100644
+--- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
++++ b/src/main/java/com/canyonmodded/config/CanyonConfig.java
+@@ -9,6 +9,7 @@ public class CanyonConfig {
+     public static boolean useNewNetworkingStack = false;
+     public static int maxOutstandingChunks = 2;
+     public static int autoSave = 6000;
++    public static boolean asyncChunkLoading = false;
+ 
+     public static void loadConfiguration(File file) {
+         Configuration configuration = new Configuration(file);
+@@ -18,6 +19,7 @@ public class CanyonConfig {
+         useNewNetworkingStack = configuration.getBoolean("settings.use-new-networking-stack", false);
+         maxOutstandingChunks = configuration.getInt("settings.max-outstanding-chunks", maxOutstandingChunks);
+         autoSave = configuration.getInt("settings.auto-save-every", 6000);
++        asyncChunkLoading = configuration.getBoolean("settings.async-chunk-loading", false);
+ 
+         configuration.save();
+     }
 diff --git a/src/main/java/net/minecraft/server/ChunkProviderServer.java b/src/main/java/net/minecraft/server/ChunkProviderServer.java
-index 0b232fd1..b39098b4 100644
+index 0b232fd1..7e849077 100644
 --- a/src/main/java/net/minecraft/server/ChunkProviderServer.java
 +++ b/src/main/java/net/minecraft/server/ChunkProviderServer.java
 @@ -21,6 +21,16 @@ import org.bukkit.generator.BlockPopulator;
@@ -196,15 +216,14 @@ index 0b232fd1..b39098b4 100644
          if (!chunk.done) {
              chunk.done = true;
              if (this.chunkProvider != null) {
-@@ -265,4 +313,64 @@ public class ChunkProviderServer implements IChunkProvider {
+@@ -265,4 +313,63 @@ public class ChunkProviderServer implements IChunkProvider {
      public boolean canSave() {
          return !this.world.canSave;
      }
 +
 +    // Canyon Start - async load process
 +    private java.util.concurrent.CompletableFuture<Chunk> requestChunkLoad(int x, int z, boolean immediate) {
-+        if (this.world.server == null) {
-+            // The server is not yet available, so do everything sync for now
++        if (this.world.server == null || !com.canyonmodded.config.CanyonConfig.asyncChunkLoading) {
 +            Chunk loaded = realLoadChunk(x, z);
 +            Chunk processed = this.postLoadTask(loaded, x, z);
 +            return java.util.concurrent.CompletableFuture.completedFuture(processed);
@@ -420,5 +439,5 @@ index 0faf610e..c51e06fb 100644
          return world.worldData.hasStorm();
      }
 -- 
-2.25.2
+2.26.2
 
