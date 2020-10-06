@@ -1,4 +1,4 @@
-From c204f93fbb1178cd4760d9e3c8ca0db1453ae926 Mon Sep 17 00:00:00 2001
+From 2523e2272e44f220bbb2279e2581ec5f72dd4dbb Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Mon, 30 Sep 2019 02:28:06 -0400
 Subject: [PATCH] User-configurable autosave
@@ -40,5 +40,5 @@ index 4c19b963..1d4ad166 100644
          }
  
 -- 
-2.25.2
+2.26.2
 

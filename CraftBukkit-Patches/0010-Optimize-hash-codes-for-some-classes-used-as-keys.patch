@@ -1,4 +1,4 @@
-From 75afb5ebc12256bf94764ab6bd0bc5c5526d565d Mon Sep 17 00:00:00 2001
+From d4932a53cb203e05ad35a0badff5f81c30dcc765 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sun, 29 Sep 2019 18:54:13 -0400
 Subject: [PATCH] Optimize hash codes for some classes used as keys
@@ -25,5 +25,5 @@ index b461a80f..76e8c9ff 100644
  
      public NextTickListEntry a(long i) {
 -- 
-2.25.2
+2.26.2
 

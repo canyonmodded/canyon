@@ -1,4 +1,4 @@
-From 739d880391caafd3ca9135eb95833368ab0bf1e7 Mon Sep 17 00:00:00 2001
+From d71f143c4fc1b4803a31b253b82f44291dfe8eff Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sun, 29 Sep 2019 22:37:16 -0400
 Subject: [PATCH] Only tick world chunks based on view distance
@@ -20,5 +20,5 @@ index 8c68eb15..4c19b963 100644
              for (k = -b0; k <= b0; ++k) {
                  for (l = -b0; l <= b0; ++l) {
 -- 
-2.25.2
+2.26.2
 

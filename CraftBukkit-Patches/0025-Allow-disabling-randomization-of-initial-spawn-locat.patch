@@ -1,4 +1,4 @@
-From f514197c115d9a4598252c223975218f7ea7bd68 Mon Sep 17 00:00:00 2001
+From 52ce17eac5b26b84510b02a3318414da6c232201 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Fri, 13 Mar 2020 03:16:47 -0400
 Subject: [PATCH] Allow disabling randomization of initial spawn location

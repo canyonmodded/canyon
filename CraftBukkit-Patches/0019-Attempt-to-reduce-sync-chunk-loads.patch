@@ -1,4 +1,4 @@
-From d69d640bdfa304bb93dc2fd3ef38b7c784195df9 Mon Sep 17 00:00:00 2001
+From c3f035e0b235a90ec074aac505004a7e34a3fe1d Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sun, 6 Oct 2019 01:39:11 -0400
 Subject: [PATCH] Attempt to reduce sync chunk loads
@@ -17,5 +17,5 @@ index 803067f7..b16f9a4b 100644
  
                  if (world.getTypeId(l, i1, j1) == Block.DIRT.id && world.getLightLevel(l, i1 + 1, j1) >= 4 && Block.q[k1] <= 2) {
 -- 
-2.24.1
+2.26.2
 

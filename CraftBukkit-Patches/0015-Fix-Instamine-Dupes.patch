@@ -1,4 +1,4 @@
-From cceb9937c85291b042cca0cb9499234b0e289e26 Mon Sep 17 00:00:00 2001
+From c47fa88e9007072cfaefa7f2628cae95db046e52 Mon Sep 17 00:00:00 2001
 From: RhysB <jetpackingwolf@gmail.com>
 Date: Sat, 5 Oct 2019 18:04:26 +1000
 Subject: [PATCH] Fix Instamine Dupes
@@ -53,5 +53,5 @@ index 60e1bdf0..32c583fa 100644
                      }
  
 -- 
-2.25.2
+2.26.2
 

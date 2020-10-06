@@ -1,4 +1,4 @@
-From ee8051db8db5f39e24aa7a2ab897d04ce93b70ca Mon Sep 17 00:00:00 2001
+From 9037fceac1b922d31acb7883003d58f8c60ce937 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Fri, 23 Aug 2019 23:32:54 -0400
 Subject: [PATCH] Shared random for all entities
@@ -26,5 +26,5 @@ index 37dc9f8f..7aa912c0 100644
          this.maxFireTicks = 1;
          this.fireTicks = 0;
 -- 
-2.25.2
+2.26.2
 
