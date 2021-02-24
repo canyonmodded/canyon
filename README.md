@@ -36,6 +36,6 @@ the Minecraft core).
 
 * [Paper](https://papermc.io/): build system and some backports. Tacos, Taylor
   Swift, and cats are amazing.
-* [Modification Station](https://discord.gg/Q2VguhU): advice, contributions,
+* [Modification Station](https://discord.gg/8Qky5XY): advice, contributions,
   and testers. A great community to be in if you're interested in the old
   pre-release version of Minecraft, from pre-alpha to beta 1.8.
