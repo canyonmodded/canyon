@@ -1,0 +1,22 @@
+From 8aef907f68fa9b212fdacc43859377770c0704bc Mon Sep 17 00:00:00 2001
+From: "@KoboDev" <KoboDev@mail.com>
+Date: Thu, 18 Feb 2021 11:33:54 -0600
+Subject: [PATCH] testing return inventory
+
+
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+index 7262f9f5..db666c23 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -846,7 +846,7 @@ public void createInventory(InventoryHolder ih, int i, String s){
+ @Override
+ public Inventory createInventory(InventoryHolder ih, int i) {
+ 	//something
+-	return null;
++	return Inventory;
+ }
+ 
+ 
+-- 
+2.30.0.windows.2
+
