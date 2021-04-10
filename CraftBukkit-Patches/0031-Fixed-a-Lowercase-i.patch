@@ -1,0 +1,22 @@
+From 89c929fa5b2507d0d0dcc68799a11844dcd9e137 Mon Sep 17 00:00:00 2001
+From: "@KoboDev" <KoboDev@mail.com>
+Date: Thu, 18 Feb 2021 09:55:04 -0600
+Subject: [PATCH] Fixed a Lowercase i
+
+
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+index 7e0464ab..de5573dc 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -840,7 +840,7 @@ public final class CraftServer implements Server {
+     }
+ 
+ @Override
+-public inventory createInventory(InventoryHolder ih, int i, String s){
++public Inventory createInventory(InventoryHolder ih, int i, String s){
+    // something other than something.
+ }
+ 
+-- 
+2.30.0.windows.2
+
