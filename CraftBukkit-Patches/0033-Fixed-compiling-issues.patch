@@ -1,0 +1,22 @@
+From 47fe8436141f2fdc3e658c9c4dff8b32831e1a4e Mon Sep 17 00:00:00 2001
+From: KoboDev <kobodev@mail.com>
+Date: Sun, 18 Apr 2021 08:28:01 -0500
+Subject: [PATCH] Fixed compiling issues
+
+
+diff --git a/pom.xml b/pom.xml
+index 4a6cc64f..2f56eb4f 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -24,7 +24,7 @@
+   <repositories>
+     <repository>
+       <id>bukkit-repo</id>
+-      <url>https://download1475.mediafire.com/1y1zt9hg51hg/xuiz2lwjyfiljfp/minecraft-server.jar</url> <!-- Canyon: replace repo -->
++      <url>https://raw.githubusercontent.com/KoboDev/SupplyAndDemand/bukkit-repo-canyon</url> <!-- Canyon: replace repo -->
+     </repository>
+     <repository>
+       <id>canyon-local-repo</id>
+-- 
+2.31.1.windows.1
+
