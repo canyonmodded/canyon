@@ -11,6 +11,14 @@ mods as much as possible.
 3. Run `mvn clean package`.
 4. Find the server JAR in `Canyon-Server/target`.
 
+OR!
+
+## Downloading
+
+Due to legal issues from cb, we can not really set this as default or post builds here.
+You can download them [Here.](https://ci.velocitypowered.com/job/Canyon/)
+Or check our discord when jenkins fails to login and properly build.
+
 ## Differences from CraftBukkit
 
 Canyon features:
