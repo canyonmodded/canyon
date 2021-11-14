@@ -4,6 +4,8 @@ Canyon is a fork of CraftBukkit for Minecraft Beta 1.7.3. It includes multiple
 enhancements whilst also retaining compatibility with old Bukkit plugins and
 mods as much as possible.
 
+Downloads: https://ci.velocitypowered.com/job/Canyon/
+
 ## Building
 
 1. Clone the repo with `git clone --recursive https://github.com/canyonmodded/canyon.git`.
