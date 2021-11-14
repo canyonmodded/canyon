@@ -5,7 +5,6 @@ enhancements whilst also retaining compatibility with old Bukkit plugins and
 mods as much as possible.
 
 Downloads: https://ci.velocitypowered.com/job/Canyon/
-
 ## Building
 
 1. Clone the repo with `git clone --recursive https://github.com/canyonmodded/canyon.git`.
