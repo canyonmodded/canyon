@@ -43,7 +43,6 @@ import BlockChest
 import BlockGrass
 import BlockFlowing
 import Packet10Flying
-import ChunkLoader
 
 cd "$basedir/CraftBukkit"
 $gitcmd add . -A >/dev/null 2>&1
