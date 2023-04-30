@@ -1,4 +1,4 @@
-# Canyon [![Jenkins](https://img.shields.io/jenkins/build/https/ci.velocitypowered.com/job/Canyon)](https://ci.velocitypowered.com/job/Canyon) [![Discord](https://img.shields.io/discord/627985817020923937)](https://discord.gg/hj5m5z3) [![forthebadge](https://forthebadge.com/images/badges/contains-technical-debt.svg)](https://forthebadge.com)
+# Canyon [![Jenkins](https://img.shields.io/jenkins/build/https/ci.velocitypowered.com/job/Canyon)](https://jenkins.glass-launcher.net/job/Canyon/) [![Discord](https://img.shields.io/discord/627985817020923937)](https://discord.gg/hj5m5z3) [![forthebadge](https://forthebadge.com/images/badges/contains-technical-debt.svg)](https://forthebadge.com)
 
 Canyon is a fork of CraftBukkit for Minecraft Beta 1.7.3. It includes multiple
 enhancements whilst also retaining compatibility with old Bukkit plugins and
@@ -16,7 +16,7 @@ OR!
 ## Downloading
 
 Due to legal issues from cb, we can not really set this as default or post builds here.
-You can download them [Here.](https://ci.velocitypowered.com/job/Canyon/)
+You can download them [Here.](https://jenkins.glass-launcher.net/job/Canyon/)
 Or check our discord when jenkins fails to login and properly build.
 
 ## Differences from CraftBukkit
