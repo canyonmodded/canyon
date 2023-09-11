@@ -1,4 +1,4 @@
-From e3d10c34c82e5db223959826c57004cb58cffaff Mon Sep 17 00:00:00 2001
+From 157cec51bdbcf274cdda49b59eab267191440760 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 01:48:38 -0400
 Subject: [PATCH] Optimize RegionFile
@@ -7,7 +7,7 @@ Reads are batched as much as possible, file system truncation calls
 are used, and chunk buffers (for writing and reading) are buffered.
 
 diff --git a/src/main/java/net/minecraft/server/RegionFile.java b/src/main/java/net/minecraft/server/RegionFile.java
-index 1aca87dd..7715d839 100644
+index 1aca87dd0..88d276af6 100644
 --- a/src/main/java/net/minecraft/server/RegionFile.java
 +++ b/src/main/java/net/minecraft/server/RegionFile.java
 @@ -1,11 +1,6 @@
@@ -80,7 +80,7 @@ index 1aca87dd..7715d839 100644
 +                    throw new EOFException();
 +                }
 +            }
-+            header.flip();
++            ((java.nio.Buffer) header).flip();
 +            java.nio.IntBuffer headerAsInts = header.asIntBuffer();
              for (j = 0; j < 1024; ++j) {
 -                k = this.c.readInt();
@@ -109,7 +109,7 @@ index 1aca87dd..7715d839 100644
 +                                throw new EOFException();
 +                            }
 +                        }
-+                        bb.flip();
++                        ((java.nio.Buffer) bb).flip();
 +                        int j1 = bb.getInt();
  
                          if (j1 > 4096 * i1) {
@@ -151,5 +151,5 @@ index 1aca87dd..7715d839 100644
  
      protected synchronized void a(int i, int j, byte[] abyte, int k) {
 -- 
-2.22.0
+2.33.0
 
