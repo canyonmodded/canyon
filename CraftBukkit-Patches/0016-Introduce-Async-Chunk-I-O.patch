@@ -1,4 +1,4 @@
-From ed2c6f6a81d4fe32d51dddf80a05a38f8f21306d Mon Sep 17 00:00:00 2001
+From ad4936fcdffcb8b1934bd3d54dd29a89324318af Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 5 Oct 2019 03:08:44 -0400
 Subject: [PATCH] Introduce Async Chunk I/O
@@ -30,6 +30,34 @@ index 0e5b7a19a..efaad611c 100644
  
          configuration.save();
      }
+diff --git a/src/main/java/com/canyonmodded/util/SimpleDaemonThreadFactory.java b/src/main/java/com/canyonmodded/util/SimpleDaemonThreadFactory.java
+new file mode 100644
+index 000000000..73b2f9445
+--- /dev/null
++++ b/src/main/java/com/canyonmodded/util/SimpleDaemonThreadFactory.java
+@@ -0,0 +1,21 @@
++package com.canyonmodded.util;
++
++import java.util.Objects;
++import java.util.concurrent.ThreadFactory;
++import java.util.concurrent.atomic.AtomicInteger;
++
++public class SimpleDaemonThreadFactory implements ThreadFactory {
++    private final String format;
++    private final AtomicInteger idGenerator = new AtomicInteger();
++
++    public SimpleDaemonThreadFactory(String format) {
++        this.format = Objects.requireNonNull(format, "format");
++    }
++
++    @Override
++    public Thread newThread(Runnable r) {
++        Thread thread = new Thread(r);
++        thread.setName(String.format(format, idGenerator.incrementAndGet()));
++        return thread;
++    }
++}
+\ No newline at end of file
 diff --git a/src/main/java/net/minecraft/server/ChunkProviderServer.java b/src/main/java/net/minecraft/server/ChunkProviderServer.java
 index 0b232fd13..7e8490779 100644
 --- a/src/main/java/net/minecraft/server/ChunkProviderServer.java
