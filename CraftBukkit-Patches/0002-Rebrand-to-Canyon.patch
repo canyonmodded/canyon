@@ -1,11 +1,11 @@
-From 48736e6500297b374c74295d0f3bd5a0da926477 Mon Sep 17 00:00:00 2001
+From 2cb81f734b5fa9a63fb85037f4309130f02e67c7 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Wed, 21 Aug 2019 23:46:10 -0400
 Subject: [PATCH] Rebrand to Canyon
 
 
 diff --git a/pom.xml b/pom.xml
-index 6b94dd16..033f5b07 100644
+index 6b94dd169..d5dcc0d44 100644
 --- a/pom.xml
 +++ b/pom.xml
 @@ -1,11 +1,16 @@
@@ -34,7 +34,7 @@ index 6b94dd16..033f5b07 100644
      <repository>
        <id>bukkit-repo</id>
 -      <url>http://repo.bukkit.org/artifactory/repo</url>
-+      <url>https://repo.canyonmodded.com</url> <!-- Canyon: replace repo -->
++      <url>https://raw.githubusercontent.com/canyonmodded/mc-server/main</url> <!-- Canyon: replace repo -->
      </repository>
    </repositories>
    <pluginRepositories>
@@ -140,7 +140,7 @@ index 6b94dd16..033f5b07 100644
        </plugin>
      </plugins>
 diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-index e5c92b7f..e7e3ccf7 100644
+index e5c92b7f5..e7e3ccf72 100644
 --- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
 +++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
 @@ -77,7 +77,7 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
@@ -153,5 +153,5 @@ index e5c92b7f..e7e3ccf7 100644
      private final String protocolVersion = "1.7.3";
      private final ServicesManager servicesManager = new SimpleServicesManager();
 -- 
-2.24.0
+2.33.0
 

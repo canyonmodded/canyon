@@ -1,11 +1,11 @@
-From b6c2f82df8404200229aa0bb3787b1ed1b7908fb Mon Sep 17 00:00:00 2001
+From 3382b944c3673584fa4d57f57c0049b976871def Mon Sep 17 00:00:00 2001
 From: Egor <egor@opensrc.club>
 Date: Tue, 7 Sep 2021 02:28:54 +0300
 Subject: [PATCH] fix creeper music disc drops
 
 
 diff --git a/src/main/java/net/minecraft/server/EntityArrow.java b/src/main/java/net/minecraft/server/EntityArrow.java
-index 614b2955..f533487b 100644
+index 614b2955e..f533487ba 100644
 --- a/src/main/java/net/minecraft/server/EntityArrow.java
 +++ b/src/main/java/net/minecraft/server/EntityArrow.java
 @@ -187,7 +187,7 @@ public class EntityArrow extends Entity {
@@ -18,5 +18,5 @@ index 614b2955..f533487b 100644
                      } else {
                          stick = movingobjectposition.entity.damageEntity(this.shooter, 4);
 -- 
-2.20.1
+2.33.0
 

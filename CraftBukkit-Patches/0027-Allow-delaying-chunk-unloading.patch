@@ -1,16 +1,16 @@
-From cae483b11fc256da55a0b5ebcec7f84284091c64 Mon Sep 17 00:00:00 2001
+From 27cc2172c90425f67d1eae24cf420a453c959913 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 19 Mar 2020 04:32:11 -0400
 Subject: [PATCH] Allow delaying chunk unloading
 
 
 diff --git a/pom.xml b/pom.xml
-index bc115871..0760f87c 100644
+index 50f8472b0..c37ec7fef 100644
 --- a/pom.xml
 +++ b/pom.xml
 @@ -26,6 +26,10 @@
        <id>bukkit-repo</id>
-       <url>https://repo.canyonmodded.com</url> <!-- Canyon: replace repo -->
+       <url>https://raw.githubusercontent.com/canyonmodded/mc-server/main</url> <!-- Canyon: replace repo -->
      </repository>
 +    <repository>
 +      <id>canyon-local-repo</id>
@@ -48,7 +48,7 @@ index bc115871..0760f87c 100644
          </executions>
        </plugin>
 diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
-index b8f897f3..de27ef58 100644
+index b8f897f30..de27ef58f 100644
 --- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
 +++ b/src/main/java/com/canyonmodded/config/CanyonConfig.java
 @@ -13,6 +13,7 @@ public class CanyonConfig {
@@ -68,7 +68,7 @@ index b8f897f3..de27ef58 100644
          configuration.save();
      }
 diff --git a/src/main/java/net/minecraft/server/ChunkProviderServer.java b/src/main/java/net/minecraft/server/ChunkProviderServer.java
-index 7e849077..a343744b 100644
+index 7e8490779..a343744b0 100644
 --- a/src/main/java/net/minecraft/server/ChunkProviderServer.java
 +++ b/src/main/java/net/minecraft/server/ChunkProviderServer.java
 @@ -11,6 +11,7 @@ import java.util.Set;
@@ -128,7 +128,7 @@ index 7e849077..a343744b 100644
                  if (chunk == null) continue;
  
 diff --git a/src/main/java/org/bukkit/craftbukkit/util/LongHash.java b/src/main/java/org/bukkit/craftbukkit/util/LongHash.java
-index f3fc7d19..de15f8c3 100644
+index f3fc7d195..de15f8c31 100644
 --- a/src/main/java/org/bukkit/craftbukkit/util/LongHash.java
 +++ b/src/main/java/org/bukkit/craftbukkit/util/LongHash.java
 @@ -10,7 +10,7 @@ package org.bukkit.craftbukkit.util;
@@ -141,5 +141,5 @@ index f3fc7d19..de15f8c3 100644
      }
  
 -- 
-2.26.2
+2.33.0
 

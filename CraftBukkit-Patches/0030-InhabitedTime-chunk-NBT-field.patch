@@ -1,4 +1,4 @@
-From 11a3209d9e4f75856fce3604b240de76c5ce9929 Mon Sep 17 00:00:00 2001
+From c0bde11dd72ba1595250579f97097d61543cb559 Mon Sep 17 00:00:00 2001
 From: mintoyatsu <53593903+mintoyatsu@users.noreply.github.com>
 Date: Sat, 18 Jul 2020 00:39:22 -0700
 Subject: [PATCH] InhabitedTime chunk NBT field
@@ -7,7 +7,7 @@ Keeps track of how long (in ticks) chunks have been loaded by players.
 This applies to all chunks within the player's render distance.
 
 diff --git a/src/main/java/net/minecraft/server/Chunk.java b/src/main/java/net/minecraft/server/Chunk.java
-index e44b9378..bd6f9f1f 100644
+index e44b93789..bd6f9f1fb 100644
 --- a/src/main/java/net/minecraft/server/Chunk.java
 +++ b/src/main/java/net/minecraft/server/Chunk.java
 @@ -27,6 +27,7 @@ public class Chunk {
@@ -15,11 +15,11 @@ index e44b9378..bd6f9f1f 100644
      public boolean q;
      public long r;
 +    public long inhabitedTime; // Canyon - the cumulative number of ticks players have been in this chunk
-
+ 
      public Chunk(World world, int i, int j) {
          this.tileEntities = new HashMap();
 diff --git a/src/main/java/net/minecraft/server/ChunkLoader.java b/src/main/java/net/minecraft/server/ChunkLoader.java
-index 7729ea5f..47d7d248 100644
+index 7729ea5fd..47d7d248c 100644
 --- a/src/main/java/net/minecraft/server/ChunkLoader.java
 +++ b/src/main/java/net/minecraft/server/ChunkLoader.java
 @@ -125,6 +125,7 @@ public class ChunkLoader implements IChunkLoader {
@@ -29,7 +29,7 @@ index 7729ea5f..47d7d248 100644
 +        nbttagcompound.setLong("InhabitedTime", chunk.inhabitedTime); // Canyon - the cumulative number of ticks players have been in this chunk
          chunk.q = false;
          NBTTagList nbttaglist = new NBTTagList();
-
+ 
 @@ -172,6 +173,7 @@ public class ChunkLoader implements IChunkLoader {
          chunk.g = new NibbleArray(nbttagcompound.j("BlockLight"));
          chunk.heightMap = nbttagcompound.j("HeightMap");
@@ -39,7 +39,7 @@ index 7729ea5f..47d7d248 100644
              chunk.e = new NibbleArray(chunk.b.length);
          }
 diff --git a/src/main/java/net/minecraft/server/PlayerInstance.java b/src/main/java/net/minecraft/server/PlayerInstance.java
-index d32d70db..9f94bbda 100644
+index d32d70db7..9f94bbda9 100644
 --- a/src/main/java/net/minecraft/server/PlayerInstance.java
 +++ b/src/main/java/net/minecraft/server/PlayerInstance.java
 @@ -17,6 +17,7 @@ class PlayerInstance {
@@ -47,13 +47,13 @@ index d32d70db..9f94bbda 100644
      private int l;
      private int m;
 +    private long previousWorldTime; // Canyon - used when chunk InhabitedTime is being calculated
-
+ 
      final PlayerManager playerManager;
-
+ 
 @@ -41,6 +42,12 @@ class PlayerInstance {
              }
              // CraftBukkit end
-
+ 
 +            // Canyon start
 +            if (this.b.isEmpty()) {
 +                this.previousWorldTime = this.playerManager.a().getWorld().getFullTime();
@@ -66,7 +66,7 @@ index d32d70db..9f94bbda 100644
 @@ -52,6 +59,11 @@ class PlayerInstance {
              if (this.b.size() == 0) {
                  long i = (long) this.chunkX + 2147483647L | (long) this.chunkZ + 2147483647L << 32;
-
+ 
 +                // Canyon start
 +                this.increaseInhabitedTime();
 +                PlayerManager.getChunkWatcherList(this.playerManager).remove(this);
@@ -91,7 +91,7 @@ index d32d70db..9f94bbda 100644
 +    // Canyon end
  }
 diff --git a/src/main/java/net/minecraft/server/PlayerManager.java b/src/main/java/net/minecraft/server/PlayerManager.java
-index af7ff765..b9eda622 100644
+index 88a3e63f3..b6a5e11c8 100644
 --- a/src/main/java/net/minecraft/server/PlayerManager.java
 +++ b/src/main/java/net/minecraft/server/PlayerManager.java
 @@ -12,6 +12,8 @@ public class PlayerManager {
@@ -100,12 +100,12 @@ index af7ff765..b9eda622 100644
      private final int[][] g = new int[][] { { 1, 0}, { 0, 1}, { -1, 0}, { 0, -1}};
 +    private long previousTotalWorldTime; // Canyon - used to check if InhabitedTime should be calculated
 +    private List playerInstanceList = new ArrayList(); // Canyon - used when chunk should be processed
-
+ 
      public PlayerManager(MinecraftServer minecraftserver, int i, int j) {
          if (j > 15) {
 @@ -30,9 +32,24 @@ public class PlayerManager {
      }
-
+ 
      public void flush() {
 -        for (int i = 0; i < this.c.size(); ++i) {
 -            ((PlayerInstance) this.c.get(i)).a();
@@ -127,7 +127,7 @@ index af7ff765..b9eda622 100644
 +            }
          }
 +        // Canyon end
-
+ 
          this.c.clear();
      }
 @@ -44,6 +61,7 @@ public class PlayerManager {
@@ -136,7 +136,7 @@ index af7ff765..b9eda622 100644
              this.b.a(k, playerinstance);
 +            this.playerInstanceList.add(playerinstance); // Canyon - used when chunk should be processed for InhabitedTime
          }
-
+ 
          return playerinstance;
 @@ -185,4 +203,10 @@ public class PlayerManager {
      static List b(PlayerManager playermanager) {
@@ -150,5 +150,5 @@ index af7ff765..b9eda622 100644
 +    // Canyon end
  }
 -- 
-2.27.0.windows.1
+2.33.0
 
