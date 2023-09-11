@@ -1,4 +1,4 @@
-From cb521845cbf0efbf0f9a8434d11a07eeef4fcdf5 Mon Sep 17 00:00:00 2001
+From 86d74fa563f89a68e3e023515685e01561f93550 Mon Sep 17 00:00:00 2001
 From: mintoyatsu <53593903+mintoyatsu@users.noreply.github.com>
 Date: Wed, 27 Nov 2019 20:26:31 -0700
 Subject: [PATCH] Water spring propagation fix
@@ -11,7 +11,7 @@ This patch fixes the bug that prevents a water spring from being created if the
 empty location is directly above another water spring.
 
 diff --git a/src/main/java/net/minecraft/server/BlockFlowing.java b/src/main/java/net/minecraft/server/BlockFlowing.java
-index 52ba8de1..bbc5145a 100644
+index 52ba8de16..bbc5145a2 100644
 --- a/src/main/java/net/minecraft/server/BlockFlowing.java
 +++ b/src/main/java/net/minecraft/server/BlockFlowing.java
 @@ -69,7 +69,7 @@ public class BlockFlowing extends BlockFluids {
@@ -24,5 +24,5 @@ index 52ba8de1..bbc5145a 100644
                  }
              }
 -- 
-2.26.2
+2.33.0
 

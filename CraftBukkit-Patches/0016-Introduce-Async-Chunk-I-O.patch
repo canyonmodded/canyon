@@ -1,4 +1,4 @@
-From 9970692aa2ad87c159e50353eb3d4b9ca9048d04 Mon Sep 17 00:00:00 2001
+From ed2c6f6a81d4fe32d51dddf80a05a38f8f21306d Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 5 Oct 2019 03:08:44 -0400
 Subject: [PATCH] Introduce Async Chunk I/O
@@ -11,7 +11,7 @@ to the rest of the server as possible, whilst leveraging async chunk
 loading in places where it is most likely to help.
 
 diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
-index 0e5b7a19..efaad611 100644
+index 0e5b7a19a..efaad611c 100644
 --- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
 +++ b/src/main/java/com/canyonmodded/config/CanyonConfig.java
 @@ -9,6 +9,7 @@ public class CanyonConfig {
@@ -31,7 +31,7 @@ index 0e5b7a19..efaad611 100644
          configuration.save();
      }
 diff --git a/src/main/java/net/minecraft/server/ChunkProviderServer.java b/src/main/java/net/minecraft/server/ChunkProviderServer.java
-index 0b232fd1..7e849077 100644
+index 0b232fd13..7e8490779 100644
 --- a/src/main/java/net/minecraft/server/ChunkProviderServer.java
 +++ b/src/main/java/net/minecraft/server/ChunkProviderServer.java
 @@ -21,6 +21,16 @@ import org.bukkit.generator.BlockPopulator;
@@ -281,7 +281,7 @@ index 0b232fd1..7e849077 100644
 +    // Canyon End
  }
 diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
-index c7fa3a18..328f385f 100644
+index c7fa3a184..328f385fd 100644
 --- a/src/main/java/net/minecraft/server/EntityPlayer.java
 +++ b/src/main/java/net/minecraft/server/EntityPlayer.java
 @@ -1,7 +1,6 @@
@@ -309,10 +309,10 @@ index c7fa3a18..328f385f 100644
          --this.bM;
          this.activeContainer.a();
 diff --git a/src/main/java/net/minecraft/server/NetLoginHandler.java b/src/main/java/net/minecraft/server/NetLoginHandler.java
-index 145d61a1..dfa5b6d9 100644
+index 213470108..0b9be150b 100644
 --- a/src/main/java/net/minecraft/server/NetLoginHandler.java
 +++ b/src/main/java/net/minecraft/server/NetLoginHandler.java
-@@ -112,6 +112,11 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
+@@ -108,6 +108,11 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
              a.info(this.b() + " logged in with entity id " + entityplayer.id + " at ([" + entityplayer.world.worldData.name + "] " + entityplayer.locX + ", " + entityplayer.locY + ", " + entityplayer.locZ + ")");
              WorldServer worldserver = (WorldServer) entityplayer.world; // CraftBukkit
              ChunkCoordinates chunkcoordinates = worldserver.getSpawn();
@@ -324,7 +324,7 @@ index 145d61a1..dfa5b6d9 100644
              NetServerHandler netserverhandler = new NetServerHandler(this.server, this.networkManager, entityplayer);
  
              netserverhandler.sendPacket(new Packet1Login("", entityplayer.id, worldserver.getSeed(), (byte) worldserver.worldProvider.dimension));
-@@ -123,6 +128,8 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
+@@ -119,6 +124,8 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
              if (this.server.networkListenThread != null) this.server.networkListenThread.a(netserverhandler); // Canyon
              netserverhandler.sendPacket(new Packet4UpdateTime(entityplayer.getPlayerTime())); // CraftBukkit - add support for player specific time
              entityplayer.syncInventory();
@@ -334,7 +334,7 @@ index 145d61a1..dfa5b6d9 100644
  
          this.c = true;
 diff --git a/src/main/java/net/minecraft/server/PlayerInstance.java b/src/main/java/net/minecraft/server/PlayerInstance.java
-index 3c7706d5..d32d70db 100644
+index 3c7706d57..d32d70db7 100644
 --- a/src/main/java/net/minecraft/server/PlayerInstance.java
 +++ b/src/main/java/net/minecraft/server/PlayerInstance.java
 @@ -28,7 +28,7 @@ class PlayerInstance {
@@ -347,7 +347,7 @@ index 3c7706d5..d32d70db 100644
  
      public void a(EntityPlayer entityplayer) {
 diff --git a/src/main/java/net/minecraft/server/ServerConfigurationManager.java b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
-index 981f058a..30d058a0 100644
+index 981f058af..30d058a04 100644
 --- a/src/main/java/net/minecraft/server/ServerConfigurationManager.java
 +++ b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
 @@ -89,7 +89,7 @@ public class ServerConfigurationManager {
@@ -421,7 +421,7 @@ index 981f058a..30d058a0 100644
      }
  
 diff --git a/src/main/java/org/bukkit/craftbukkit/CraftWorld.java b/src/main/java/org/bukkit/craftbukkit/CraftWorld.java
-index 0faf610e..c51e06fb 100644
+index 0faf610eb..c51e06fb6 100644
 --- a/src/main/java/org/bukkit/craftbukkit/CraftWorld.java
 +++ b/src/main/java/org/bukkit/craftbukkit/CraftWorld.java
 @@ -583,6 +583,13 @@ public class CraftWorld implements World {
@@ -439,5 +439,5 @@ index 0faf610e..c51e06fb 100644
          return world.worldData.hasStorm();
      }
 -- 
-2.26.2
+2.33.0
 

@@ -1,4 +1,4 @@
-From cbcb4fd350d049d9c0a9a5fb7cec596554edc6c6 Mon Sep 17 00:00:00 2001
+From dd4b35160a8d299aa54bc3c4260543a8a1b987db Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Tue, 8 Oct 2019 19:56:55 -0400
 Subject: [PATCH] Send queued chunk packets at opportune times
@@ -6,7 +6,7 @@ Subject: [PATCH] Send queued chunk packets at opportune times
 Fixes annoying post-login/teleport lag where you can get "stuck" in stone.
 
 diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
-index f5aebd3e..7cc361f5 100644
+index f5aebd3eb..7cc361f52 100644
 --- a/src/main/java/net/minecraft/server/EntityPlayer.java
 +++ b/src/main/java/net/minecraft/server/EntityPlayer.java
 @@ -103,6 +103,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
@@ -26,10 +26,10 @@ index f5aebd3e..7cc361f5 100644
              // Canyon start - rewrote logic and moved elsewhere
              this.sendQueuedChunks();
 diff --git a/src/main/java/net/minecraft/server/NetLoginHandler.java b/src/main/java/net/minecraft/server/NetLoginHandler.java
-index dfa5b6d9..0a81ce3f 100644
+index 0b9be150b..bfb75d451 100644
 --- a/src/main/java/net/minecraft/server/NetLoginHandler.java
 +++ b/src/main/java/net/minecraft/server/NetLoginHandler.java
-@@ -128,6 +128,7 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
+@@ -124,6 +124,7 @@ public class NetLoginHandler extends NetHandler implements com.canyonmodded.netw
              if (this.server.networkListenThread != null) this.server.networkListenThread.a(netserverhandler); // Canyon
              netserverhandler.sendPacket(new Packet4UpdateTime(entityplayer.getPlayerTime())); // CraftBukkit - add support for player specific time
              entityplayer.syncInventory();
@@ -38,7 +38,7 @@ index dfa5b6d9..0a81ce3f 100644
              // Canyon End
          }
 diff --git a/src/main/java/net/minecraft/server/ServerConfigurationManager.java b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
-index 30d058a0..7ab9e275 100644
+index 30d058a04..7ab9e2754 100644
 --- a/src/main/java/net/minecraft/server/ServerConfigurationManager.java
 +++ b/src/main/java/net/minecraft/server/ServerConfigurationManager.java
 @@ -132,6 +132,7 @@ public class ServerConfigurationManager {
@@ -57,5 +57,5 @@ index 30d058a0..7ab9e275 100644
      }
  }
 -- 
-2.26.2
+2.33.0
 

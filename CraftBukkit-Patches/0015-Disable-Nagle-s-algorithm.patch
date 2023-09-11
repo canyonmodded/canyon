@@ -1,11 +1,11 @@
-From 44d9c7fdc6b1337e6ebe74a08c687b2f0d1d3485 Mon Sep 17 00:00:00 2001
+From 0ddf876905c530bd6ee8db2f29c2ea55fec491c7 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sun, 6 Oct 2019 17:06:39 -0400
 Subject: [PATCH] Disable Nagle's algorithm
 
 
 diff --git a/src/main/java/com/canyonmodded/network/NettyBootstrap.java b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
-index 0e58eeff..c4bf0196 100644
+index 0e58eeff5..c4bf01960 100644
 --- a/src/main/java/com/canyonmodded/network/NettyBootstrap.java
 +++ b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
 @@ -76,6 +76,8 @@ public class NettyBootstrap {
@@ -18,7 +18,7 @@ index 0e58eeff..c4bf0196 100644
                          NetLoginHandler handler = new NetLoginHandler(server, channel);
                          channel.pipeline()
 diff --git a/src/main/java/net/minecraft/server/NetworkManager.java b/src/main/java/net/minecraft/server/NetworkManager.java
-index 85618930..e393ad56 100644
+index 856189308..e393ad566 100644
 --- a/src/main/java/net/minecraft/server/NetworkManager.java
 +++ b/src/main/java/net/minecraft/server/NetworkManager.java
 @@ -59,6 +59,7 @@ public class NetworkManager {
@@ -30,5 +30,5 @@ index 85618930..e393ad56 100644
              this.output = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream(), 5120));
          } catch (java.io.IOException socketexception) {
 -- 
-2.26.2
+2.33.0
 

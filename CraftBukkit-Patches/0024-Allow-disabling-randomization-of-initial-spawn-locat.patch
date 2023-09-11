@@ -1,4 +1,4 @@
-From 52ce17eac5b26b84510b02a3318414da6c232201 Mon Sep 17 00:00:00 2001
+From 70824dbb8869369ebdf65109e2700afa13cb5603 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Fri, 13 Mar 2020 03:16:47 -0400
 Subject: [PATCH] Allow disabling randomization of initial spawn location
@@ -7,7 +7,7 @@ By default, Minecraft will spawn new players within 10 blocks of the world
 spawn. This option allows you to opt out of this behavior.
 
 diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
-index ecf0d4d0..b8f897f3 100644
+index ecf0d4d02..b8f897f30 100644
 --- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
 +++ b/src/main/java/com/canyonmodded/config/CanyonConfig.java
 @@ -12,6 +12,7 @@ public class CanyonConfig {
@@ -27,7 +27,7 @@ index ecf0d4d0..b8f897f3 100644
          configuration.save();
      }
 diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
-index 7cc361f5..e32c530f 100644
+index 7cc361f52..e32c530f4 100644
 --- a/src/main/java/net/minecraft/server/EntityPlayer.java
 +++ b/src/main/java/net/minecraft/server/EntityPlayer.java
 @@ -39,7 +39,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
@@ -40,5 +40,5 @@ index 7cc361f5..e32c530f 100644
              k = world.f(i, j);
              j += this.random.nextInt(20) - 10;
 -- 
-2.26.2
+2.33.0
 

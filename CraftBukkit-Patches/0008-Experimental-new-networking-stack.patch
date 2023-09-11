@@ -1,4 +1,4 @@
-From 49068fe4c5f01ff0b806c05f3a875f5a0eae57b8 Mon Sep 17 00:00:00 2001
+From 4a4977cdc84efbae2aae028e9388a84484cbbd0e Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Thu, 22 Aug 2019 23:12:21 -0400
 Subject: [PATCH] Experimental new networking stack
@@ -14,7 +14,7 @@ modify the packet reader and writer to manipulate packets. An alternative
 API may be provided in the future.
 
 diff --git a/pom.xml b/pom.xml
-index 033f5b07..1c3b2552 100644
+index d5dcc0d44..7d6f94712 100644
 --- a/pom.xml
 +++ b/pom.xml
 @@ -79,14 +79,14 @@
@@ -44,7 +44,7 @@ index 033f5b07..1c3b2552 100644
        <scope>compile</scope>
        <classifier>osx-x86_64</classifier>
 diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
-index d7dffe62..971ac06c 100644
+index d7dffe62d..971ac06c5 100644
 --- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
 +++ b/src/main/java/com/canyonmodded/config/CanyonConfig.java
 @@ -6,12 +6,14 @@ import java.io.File;
@@ -64,7 +64,7 @@ index d7dffe62..971ac06c 100644
      }
 diff --git a/src/main/java/com/canyonmodded/network/AsyncCapableNetHandler.java b/src/main/java/com/canyonmodded/network/AsyncCapableNetHandler.java
 new file mode 100644
-index 00000000..d645e7c9
+index 000000000..d645e7c99
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/AsyncCapableNetHandler.java
 @@ -0,0 +1,4 @@
@@ -74,7 +74,7 @@ index 00000000..d645e7c9
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NettyBootstrap.java b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
 new file mode 100644
-index 00000000..0e58eeff
+index 000000000..0e58eeff5
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NettyBootstrap.java
 @@ -0,0 +1,137 @@
@@ -217,7 +217,7 @@ index 00000000..0e58eeff
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NettyNetworkManager.java b/src/main/java/com/canyonmodded/network/NettyNetworkManager.java
 new file mode 100644
-index 00000000..fbb9433b
+index 000000000..fbb9433b9
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NettyNetworkManager.java
 @@ -0,0 +1,57 @@
@@ -280,7 +280,7 @@ index 00000000..fbb9433b
 +}
 diff --git a/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java b/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java
 new file mode 100644
-index 00000000..25d4811b
+index 000000000..25d4811be
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/NetworkManagerHandler.java
 @@ -0,0 +1,60 @@
@@ -346,7 +346,7 @@ index 00000000..25d4811b
 +}
 diff --git a/src/main/java/com/canyonmodded/network/PacketDecoder.java b/src/main/java/com/canyonmodded/network/PacketDecoder.java
 new file mode 100644
-index 00000000..6d23f8ae
+index 000000000..6d23f8ae4
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/PacketDecoder.java
 @@ -0,0 +1,32 @@
@@ -384,7 +384,7 @@ index 00000000..6d23f8ae
 +}
 diff --git a/src/main/java/com/canyonmodded/network/PacketEncoder.java b/src/main/java/com/canyonmodded/network/PacketEncoder.java
 new file mode 100644
-index 00000000..5317f40d
+index 000000000..5317f40dd
 --- /dev/null
 +++ b/src/main/java/com/canyonmodded/network/PacketEncoder.java
 @@ -0,0 +1,39 @@
@@ -428,7 +428,7 @@ index 00000000..5317f40d
 +    }
 +}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
-index e789839f..0e8d830f 100644
+index 182e905ad..2428fe96a 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
 +++ b/src/main/java/net/minecraft/server/MinecraftServer.java
 @@ -4,18 +4,17 @@ import java.awt.GraphicsEnvironment;
@@ -492,10 +492,10 @@ index e789839f..0e8d830f 100644
 +        }*/
 +        // Canyon end
  
-         // Canyon start - note on online/offline mode
-         if (!this.onlineMode) {
-@@ -192,6 +198,24 @@ public class MinecraftServer implements Runnable, ICommandListener {
-         // Canyon end
+         if (false) { //if (!this.onlineMode) { // Canyon - Mojang has killed off online mode auth for beta Minecraft
+             log.warning("**** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!");
+@@ -187,6 +193,24 @@ public class MinecraftServer implements Runnable, ICommandListener {
+         }
  
          this.serverConfigurationManager = new ServerConfigurationManager(this);
 +        // Canyon start - moved binding here so we have access to CanyonConfig
@@ -519,7 +519,7 @@ index e789839f..0e8d830f 100644
          // CraftBukkit - removed trackers
          long j = System.nanoTime();
          String s1 = this.propertyManager.getString("level-name", "world");
-@@ -506,6 +530,12 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -501,6 +525,12 @@ public class MinecraftServer implements Runnable, ICommandListener {
          }
      }
  
@@ -532,7 +532,7 @@ index e789839f..0e8d830f 100644
      private void h() {
          ArrayList arraylist = new ArrayList();
          Iterator iterator = trackerList.keySet().iterator();
-@@ -531,6 +561,18 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -526,6 +556,18 @@ public class MinecraftServer implements Runnable, ICommandListener {
          Vec3D.a();
          ++this.ticks;
  
@@ -551,7 +551,7 @@ index e789839f..0e8d830f 100644
          ((CraftScheduler) this.server.getScheduler()).mainThreadHeartbeat(this.ticks); // CraftBukkit
  
          for (j = 0; j < this.worlds.size(); ++j) { // CraftBukkit
-@@ -556,7 +598,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -551,7 +593,8 @@ public class MinecraftServer implements Runnable, ICommandListener {
              }
          // } // CraftBukkit
  
@@ -561,7 +561,7 @@ index e789839f..0e8d830f 100644
          this.serverConfigurationManager.b();
  
          // CraftBukkit start
-@@ -607,7 +650,7 @@ public class MinecraftServer implements Runnable, ICommandListener {
+@@ -602,7 +645,7 @@ public class MinecraftServer implements Runnable, ICommandListener {
  
              // CraftBukkit - remove gui
  
@@ -571,7 +571,7 @@ index e789839f..0e8d830f 100644
              log.log(Level.SEVERE, "Failed to start the minecraft server", exception);
          }
 diff --git a/src/main/java/net/minecraft/server/NetLoginHandler.java b/src/main/java/net/minecraft/server/NetLoginHandler.java
-index 99e775b8..21347010 100644
+index 99e775b8b..213470108 100644
 --- a/src/main/java/net/minecraft/server/NetLoginHandler.java
 +++ b/src/main/java/net/minecraft/server/NetLoginHandler.java
 @@ -1,10 +1,12 @@
@@ -649,7 +649,7 @@ index 99e775b8..21347010 100644
      }
  
 diff --git a/src/main/java/net/minecraft/server/NetServerHandler.java b/src/main/java/net/minecraft/server/NetServerHandler.java
-index a8241311..68dcfca1 100644
+index a82413119..68dcfca12 100644
 --- a/src/main/java/net/minecraft/server/NetServerHandler.java
 +++ b/src/main/java/net/minecraft/server/NetServerHandler.java
 @@ -649,7 +649,7 @@ public class NetServerHandler extends NetHandler implements ICommandListener {
@@ -662,7 +662,7 @@ index a8241311..68dcfca1 100644
              ChunkCompressionThread.sendPacket(this.player, packet);
              packet = null;
 diff --git a/src/main/java/net/minecraft/server/NetworkManager.java b/src/main/java/net/minecraft/server/NetworkManager.java
-index 11cf7db8..85618930 100644
+index 11cf7db87..856189308 100644
 --- a/src/main/java/net/minecraft/server/NetworkManager.java
 +++ b/src/main/java/net/minecraft/server/NetworkManager.java
 @@ -24,7 +24,7 @@ public class NetworkManager {
@@ -712,7 +712,7 @@ index 11cf7db8..85618930 100644
              this.l = false;
  
 diff --git a/src/main/java/net/minecraft/server/Packet.java b/src/main/java/net/minecraft/server/Packet.java
-index f83acc41..525c00ff 100644
+index f83acc410..525c00ff8 100644
 --- a/src/main/java/net/minecraft/server/Packet.java
 +++ b/src/main/java/net/minecraft/server/Packet.java
 @@ -56,8 +56,14 @@ public abstract class Packet {
@@ -740,7 +740,7 @@ index f83acc41..525c00ff 100644
              return null;
          }
 diff --git a/src/main/java/net/minecraft/server/Packet10Flying.java b/src/main/java/net/minecraft/server/Packet10Flying.java
-index 7bf2f671..66a440b9 100644
+index 7bf2f6713..66a440b93 100644
 --- a/src/main/java/net/minecraft/server/Packet10Flying.java
 +++ b/src/main/java/net/minecraft/server/Packet10Flying.java
 @@ -22,7 +22,7 @@ public class Packet10Flying extends Packet {
@@ -753,7 +753,7 @@ index 7bf2f671..66a440b9 100644
  
      public void a(DataOutputStream dataoutputstream) throws java.io.IOException { // Canyon - fix decompile
 diff --git a/src/main/java/net/minecraft/server/ThreadLoginVerifier.java b/src/main/java/net/minecraft/server/ThreadLoginVerifier.java
-index d9ff03f4..310d022e 100644
+index 4d98e6ada..306db21c9 100644
 --- a/src/main/java/net/minecraft/server/ThreadLoginVerifier.java
 +++ b/src/main/java/net/minecraft/server/ThreadLoginVerifier.java
 @@ -37,11 +37,18 @@ class ThreadLoginVerifier extends Thread {
@@ -778,5 +778,5 @@ index d9ff03f4..310d022e 100644
  
                  if (event.getResult() != PlayerPreLoginEvent.Result.ALLOWED) {
 -- 
-2.26.2
+2.33.0
 

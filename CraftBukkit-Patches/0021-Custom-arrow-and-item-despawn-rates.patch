@@ -1,11 +1,11 @@
-From 29b2b5e85e4bd90ef3ccac46b24dddd11757a4c3 Mon Sep 17 00:00:00 2001
+From d6cb86f93f06f39fb71409d1d5b254f70666b796 Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Sat, 26 Oct 2019 00:42:01 -0400
 Subject: [PATCH] Custom arrow and item despawn rates
 
 
 diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
-index efaad611..ecf0d4d0 100644
+index efaad611c..ecf0d4d02 100644
 --- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
 +++ b/src/main/java/com/canyonmodded/config/CanyonConfig.java
 @@ -10,6 +10,8 @@ public class CanyonConfig {
@@ -27,7 +27,7 @@ index efaad611..ecf0d4d0 100644
          configuration.save();
      }
 diff --git a/src/main/java/net/minecraft/server/EntityArrow.java b/src/main/java/net/minecraft/server/EntityArrow.java
-index 3e31abd8..614b2955 100644
+index 3e31abd8d..614b2955e 100644
 --- a/src/main/java/net/minecraft/server/EntityArrow.java
 +++ b/src/main/java/net/minecraft/server/EntityArrow.java
 @@ -108,7 +108,7 @@ public class EntityArrow extends Entity {
@@ -40,7 +40,7 @@ index 3e31abd8..614b2955 100644
                  }
              } else {
 diff --git a/src/main/java/net/minecraft/server/EntityItem.java b/src/main/java/net/minecraft/server/EntityItem.java
-index d8558b67..d944acec 100644
+index d8558b674..d944acecf 100644
 --- a/src/main/java/net/minecraft/server/EntityItem.java
 +++ b/src/main/java/net/minecraft/server/EntityItem.java
 @@ -82,7 +82,7 @@ public class EntityItem extends Entity {
@@ -53,5 +53,5 @@ index d8558b67..d944acec 100644
          }
      }
 -- 
-2.26.2
+2.33.0
 

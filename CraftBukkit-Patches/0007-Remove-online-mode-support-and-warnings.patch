@@ -1,0 +1,31 @@
+From 83d7739a28bbce24cd614bc0d16d824193c731d7 Mon Sep 17 00:00:00 2001
+From: Andrew Steinborn <git@steinborn.me>
+Date: Mon, 11 Sep 2023 03:54:28 -0400
+Subject: [PATCH] Remove online-mode support and warnings
+
+
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 28178ba98..182e905ad 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -156,7 +156,7 @@ public class MinecraftServer implements Runnable, ICommandListener {
+         this.propertyManager = new PropertyManager(this.options); // CraftBukkit - CLI argument support
+         String s = this.propertyManager.getString("server-ip", "");
+ 
+-        this.onlineMode = this.propertyManager.getBoolean("online-mode", true);
++        this.onlineMode = false; // this.propertyManager.getBoolean("online-mode", true); // Canyon - Mojang has killed off online mode auth for beta Minecraft
+         this.spawnAnimals = this.propertyManager.getBoolean("spawn-animals", true);
+         this.pvpMode = this.propertyManager.getBoolean("pvp", true);
+         this.allowFlight = this.propertyManager.getBoolean("allow-flight", false);
+@@ -179,7 +179,7 @@ public class MinecraftServer implements Runnable, ICommandListener {
+             return false;
+         }
+ 
+-        if (!this.onlineMode) {
++        if (false) { //if (!this.onlineMode) { // Canyon - Mojang has killed off online mode auth for beta Minecraft
+             log.warning("**** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!");
+             log.warning("The server will make no attempt to authenticate usernames. Beware.");
+             log.warning("While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.");
+-- 
+2.33.0
+

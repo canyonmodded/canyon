@@ -1,4 +1,4 @@
-From feb3bbce904fbf6b5dd00a9a67ba62372f69646a Mon Sep 17 00:00:00 2001
+From 103de72b990eee8093de49084b863d53f895c90a Mon Sep 17 00:00:00 2001
 From: Andrew Steinborn <git@steinborn.me>
 Date: Tue, 8 Oct 2019 01:23:37 -0400
 Subject: [PATCH] Fix JLine issue on Windows
@@ -8,7 +8,7 @@ creating temporary files. Change our implementation version to omit
 double quotes.
 
 diff --git a/pom.xml b/pom.xml
-index 1c3b2552..a7e1785d 100644
+index 7d6f94712..f5e3bf357 100644
 --- a/pom.xml
 +++ b/pom.xml
 @@ -104,6 +104,7 @@
@@ -45,5 +45,5 @@ index 1c3b2552..a7e1785d 100644
          <groupId>org.apache.maven.plugins</groupId>
          <artifactId>maven-jar-plugin</artifactId>
 -- 
-2.26.2
+2.33.0
 
