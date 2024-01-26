@@ -1,0 +1,854 @@
+From 02dc8ec782e954a03a15387246a9ec52f7114918 Mon Sep 17 00:00:00 2001
+From: Blayung <gpewojan1@gmail.com>
+Date: Fri, 26 Jan 2024 21:17:24 +0100
+Subject: [PATCH] Implemented inventory transaction event
+
+
+diff --git a/src/main/java/net/minecraft/server/Container.java b/src/main/java/net/minecraft/server/Container.java
+new file mode 100644
+index 000000000..98cc24f22
+--- /dev/null
++++ b/src/main/java/net/minecraft/server/Container.java
+@@ -0,0 +1,333 @@
++package net.minecraft.server;
++
++// Canyon start
++import org.bukkit.craftbukkit.entity.CraftPlayer;
++import org.bukkit.craftbukkit.inventory.CraftItemStack;
++import org.bukkit.event.inventory.TransactionEvent;
++import org.bukkit.plugin.PluginManager;
++import org.bukkit.craftbukkit.CraftServer;
++import org.bukkit.Location;
++// Canyon end
++
++import java.util.ArrayList;
++import java.util.HashSet;
++import java.util.List;
++import java.util.Set;
++
++public abstract class Container {
++
++    public List d = new ArrayList();
++    public List e = new ArrayList();
++    public int windowId = 0;
++    private short a = 0;
++    protected List listeners = new ArrayList();
++    private Set b = new HashSet();
++    Location containerLocation = null; // Canyon
++
++    public Container() {}
++
++    protected void a(Slot slot) {
++        slot.a = this.e.size();
++        this.e.add(slot);
++        this.d.add(null);
++    }
++
++    public void a(ICrafting icrafting) {
++        if (this.listeners.contains(icrafting)) {
++            throw new IllegalArgumentException("Listener already listening");
++        } else {
++            this.listeners.add(icrafting);
++            icrafting.a(this, this.b());
++            this.a();
++        }
++    }
++
++    public List b() {
++        ArrayList arraylist = new ArrayList();
++
++        for (int i = 0; i < this.e.size(); ++i) {
++            arraylist.add(((Slot) this.e.get(i)).getItem());
++        }
++
++        return arraylist;
++    }
++
++    public void a() {
++        for (int i = 0; i < this.e.size(); ++i) {
++            ItemStack itemstack = ((Slot) this.e.get(i)).getItem();
++            ItemStack itemstack1 = (ItemStack) this.d.get(i);
++
++            if (!ItemStack.equals(itemstack1, itemstack)) {
++                itemstack1 = itemstack == null ? null : itemstack.cloneItemStack();
++                this.d.set(i, itemstack1);
++
++                for (int j = 0; j < this.listeners.size(); ++j) {
++                    ((ICrafting) this.listeners.get(j)).a(this, i, itemstack1);
++                }
++            }
++        }
++    }
++
++    public Slot a(IInventory iinventory, int i) {
++        for (int j = 0; j < this.e.size(); ++j) {
++            Slot slot = (Slot) this.e.get(j);
++
++            if (slot.a(iinventory, i)) {
++                return slot;
++            }
++        }
++
++        return null;
++    }
++
++    public Slot b(int i) {
++        return (Slot) this.e.get(i);
++    }
++
++    public ItemStack a(int i) {
++        Slot slot = (Slot) this.e.get(i);
++
++        return slot != null ? slot.getItem() : null;
++    }
++
++    public ItemStack a(int i, int j, boolean flag, EntityHuman entityhuman) {
++        ItemStack itemstack = null;
++
++        if (j == 0 || j == 1) {
++            InventoryPlayer inventoryplayer = entityhuman.inventory;
++
++            if (i == -999) {
++                if (inventoryplayer.j() != null && i == -999) {
++                    if (j == 0) {
++                        entityhuman.b(inventoryplayer.j());
++                        inventoryplayer.b((ItemStack) null);
++                    }
++
++                    if (j == 1) {
++                        entityhuman.b(inventoryplayer.j().a(1));
++                        if (inventoryplayer.j().count == 0) {
++                            inventoryplayer.b((ItemStack) null);
++                        }
++                    }
++                }
++            } else {
++                int k;
++
++                if (flag) {
++                    ItemStack itemstack1 = this.a(i);
++
++                    if (itemstack1 != null) {
++                        int l = itemstack1.count;
++
++                        itemstack = itemstack1.cloneItemStack();
++                        Slot slot = (Slot) this.e.get(i);
++
++                        if (slot != null && slot.getItem() != null) {
++                            k = slot.getItem().count;
++                            if (k < l) {
++                                this.a(i, j, flag, entityhuman);
++                            }
++                        }
++                    }
++                } else {
++                    Slot slot1 = (Slot) this.e.get(i);
++
++                    if (slot1 != null) {
++                        slot1.c();
++                        ItemStack itemstack2 = slot1.getItem();
++                        ItemStack itemstack3 = inventoryplayer.j();
++
++                        // Canyon start
++                        CraftServer server = entityhuman.world.getServer();
++                        PluginManager pluginManager = server.getPluginManager();
++                        CraftPlayer player = new CraftPlayer(server, (EntityPlayer) entityhuman);
++                        // Canyon end
++
++                        if (itemstack2 != null) {
++                            itemstack = itemstack2.cloneItemStack();
++                        }
++
++                        if (itemstack2 == null) {
++                            if (itemstack3 != null && slot1.isAllowed(itemstack3)) {
++                                k = j == 0 ? itemstack3.count : 1;
++                                if (k > slot1.d()) {
++                                    k = slot1.d();
++                                }
++
++                                // Canyon start
++                                ItemStack toPut = itemstack3.a(k);
++                                if (containerLocation != null && slot1.isNotPlayerInventory()) {
++                                    pluginManager.callEvent(new TransactionEvent(containerLocation, player, new CraftItemStack(toPut), false));
++                                }
++                                slot1.c(toPut);
++                                // Canyon end
++
++                                if (itemstack3.count == 0) {
++                                    inventoryplayer.b((ItemStack) null);
++                                }
++                            }
++                        } else if (itemstack3 == null) {
++                            k = j == 0 ? itemstack2.count : (itemstack2.count + 1) / 2;
++                            ItemStack itemstack4 = slot1.a(k);
++
++                            // Canyon start
++                            if (containerLocation != null && slot1.isNotPlayerInventory()) {
++                                pluginManager.callEvent(new TransactionEvent(containerLocation, player, new CraftItemStack(itemstack4), true));
++                            }
++                            // Canyon end
++
++                            inventoryplayer.b(itemstack4);
++                            if (itemstack2.count == 0) {
++                                slot1.c((ItemStack) null);
++                            }
++
++                            slot1.a(inventoryplayer.j());
++                        } else if (slot1.isAllowed(itemstack3)) {
++                            if (itemstack2.id == itemstack3.id && (!itemstack2.usesData() || itemstack2.getData() == itemstack3.getData())) {
++                                k = j == 0 ? itemstack3.count : 1;
++                                if (k > slot1.d() - itemstack2.count) {
++                                    k = slot1.d() - itemstack2.count;
++                                }
++
++                                if (k > itemstack3.getMaxStackSize() - itemstack2.count) {
++                                    k = itemstack3.getMaxStackSize() - itemstack2.count;
++                                }
++
++                                // Canyon start
++                                if (containerLocation != null && slot1.isNotPlayerInventory()) {
++                                    pluginManager.callEvent(new TransactionEvent(containerLocation, player, new CraftItemStack(new ItemStack(itemstack2.getItem(), k)), false));
++                                }
++                                // Canyon end
++
++                                itemstack3.a(k);
++                                if (itemstack3.count == 0) {
++                                    inventoryplayer.b((ItemStack) null);
++                                }
++
++                                itemstack2.count += k;
++                            } else if (itemstack3.count <= slot1.d()) {
++                                // Canyon start
++                                if (containerLocation != null && slot1.isNotPlayerInventory()) {
++                                    pluginManager.callEvent(new TransactionEvent(containerLocation, player, new CraftItemStack(itemstack2), true));
++                                    pluginManager.callEvent(new TransactionEvent(containerLocation, player, new CraftItemStack(itemstack3), false));
++                                }
++                                // Canyon end
++
++                                slot1.c(itemstack3);
++                                inventoryplayer.b(itemstack2);
++                            }
++                        } else if (itemstack2.id == itemstack3.id && itemstack3.getMaxStackSize() > 1 && (!itemstack2.usesData() || itemstack2.getData() == itemstack3.getData())) {
++                            k = itemstack2.count;
++                            if (k > 0 && k + itemstack3.count <= itemstack3.getMaxStackSize()) {
++                                // Canyon start
++                                if (containerLocation != null && slot1.isNotPlayerInventory()) {
++                                    pluginManager.callEvent(new TransactionEvent(containerLocation, player, new CraftItemStack(new ItemStack(itemstack3.getItem(), k)), true));
++                                }
++                                // Canyon end
++
++                                itemstack3.count += k;
++                                itemstack2.a(k);
++                                if (itemstack2.count == 0) {
++                                    slot1.c((ItemStack) null);
++                                }
++
++                                slot1.a(inventoryplayer.j());
++                            }
++                        }
++                    }
++                }
++            }
++        }
++
++        return itemstack;
++    }
++
++    public void a(EntityHuman entityhuman) {
++        InventoryPlayer inventoryplayer = entityhuman.inventory;
++
++        if (inventoryplayer.j() != null) {
++            entityhuman.b(inventoryplayer.j());
++            inventoryplayer.b((ItemStack) null);
++        }
++    }
++
++    public void a(IInventory iinventory) {
++        this.a();
++    }
++
++    public boolean c(EntityHuman entityhuman) {
++        return !this.b.contains(entityhuman);
++    }
++
++    public void a(EntityHuman entityhuman, boolean flag) {
++        if (flag) {
++            this.b.remove(entityhuman);
++        } else {
++            this.b.add(entityhuman);
++        }
++    }
++
++    public abstract boolean b(EntityHuman entityhuman);
++
++    protected void a(ItemStack itemstack, int i, int j, boolean flag) {
++        int k = i;
++
++        if (flag) {
++            k = j - 1;
++        }
++
++        Slot slot;
++        ItemStack itemstack1;
++
++        if (itemstack.isStackable()) {
++            while (itemstack.count > 0 && (!flag && k < j || flag && k >= i)) {
++                slot = (Slot) this.e.get(k);
++                itemstack1 = slot.getItem();
++                if (itemstack1 != null && itemstack1.id == itemstack.id && (!itemstack.usesData() || itemstack.getData() == itemstack1.getData())) {
++                    int l = itemstack1.count + itemstack.count;
++
++                    if (l <= itemstack.getMaxStackSize()) {
++                        itemstack.count = 0;
++                        itemstack1.count = l;
++                        slot.c();
++                    } else if (itemstack1.count < itemstack.getMaxStackSize()) {
++                        itemstack.count -= itemstack.getMaxStackSize() - itemstack1.count;
++                        itemstack1.count = itemstack.getMaxStackSize();
++                        slot.c();
++                    }
++                }
++
++                if (flag) {
++                    --k;
++                } else {
++                    ++k;
++                }
++            }
++        }
++
++        if (itemstack.count > 0) {
++            if (flag) {
++                k = j - 1;
++            } else {
++                k = i;
++            }
++
++            while (!flag && k < j || flag && k >= i) {
++                slot = (Slot) this.e.get(k);
++                itemstack1 = slot.getItem();
++                if (itemstack1 == null) {
++                    slot.c(itemstack.cloneItemStack());
++                    slot.c();
++                    itemstack.count = 0;
++                    break;
++                }
++
++                if (flag) {
++                    --k;
++                } else {
++                    ++k;
++                }
++            }
++        }
++    }
++}
+diff --git a/src/main/java/net/minecraft/server/ContainerChest.java b/src/main/java/net/minecraft/server/ContainerChest.java
+new file mode 100644
+index 000000000..4de0b19c3
+--- /dev/null
++++ b/src/main/java/net/minecraft/server/ContainerChest.java
+@@ -0,0 +1,62 @@
++package net.minecraft.server;
++
++public class ContainerChest extends Container {
++
++    private IInventory a;
++    private int b;
++
++    public ContainerChest(IInventory iinventory, IInventory iinventory1) {
++        this.containerLocation = iinventory1.getLocation(); // Canyon
++
++        this.a = iinventory1;
++        this.b = iinventory1.getSize() / 9;
++        int i = (this.b - 4) * 18;
++
++        int j;
++        int k;
++
++        for (j = 0; j < this.b; ++j) {
++            for (k = 0; k < 9; ++k) {
++                this.a(new Slot(iinventory1, k + j * 9, 8 + k * 18, 18 + j * 18));
++            }
++        }
++
++        for (j = 0; j < 3; ++j) {
++            for (k = 0; k < 9; ++k) {
++                this.a(new Slot(iinventory, k + j * 9 + 9, 8 + k * 18, 103 + j * 18 + i));
++            }
++        }
++
++        for (j = 0; j < 9; ++j) {
++            this.a(new Slot(iinventory, j, 8 + j * 18, 161 + i));
++        }
++    }
++
++    public boolean b(EntityHuman entityhuman) {
++        return this.a.a_(entityhuman);
++    }
++
++    public ItemStack a(int i) {
++        ItemStack itemstack = null;
++        Slot slot = (Slot) this.e.get(i);
++
++        if (slot != null && slot.b()) {
++            ItemStack itemstack1 = slot.getItem();
++
++            itemstack = itemstack1.cloneItemStack();
++            if (i < this.b * 9) {
++                this.a(itemstack1, this.b * 9, this.e.size(), true);
++            } else {
++                this.a(itemstack1, 0, this.b * 9, false);
++            }
++
++            if (itemstack1.count == 0) {
++                slot.c((ItemStack) null);
++            } else {
++                slot.c();
++            }
++        }
++
++        return itemstack;
++    }
++}
+diff --git a/src/main/java/net/minecraft/server/ContainerDispenser.java b/src/main/java/net/minecraft/server/ContainerDispenser.java
+new file mode 100644
+index 000000000..a5667b0f2
+--- /dev/null
++++ b/src/main/java/net/minecraft/server/ContainerDispenser.java
+@@ -0,0 +1,35 @@
++package net.minecraft.server;
++
++public class ContainerDispenser extends Container {
++
++    private TileEntityDispenser a;
++
++    public ContainerDispenser(IInventory iinventory, TileEntityDispenser tileentitydispenser) {
++        this.containerLocation = tileentitydispenser.getLocation(); // Canyon
++
++        this.a = tileentitydispenser;
++
++        int i;
++        int j;
++
++        for (i = 0; i < 3; ++i) {
++            for (j = 0; j < 3; ++j) {
++                this.a(new Slot(tileentitydispenser, j + i * 3, 62 + j * 18, 17 + i * 18));
++            }
++        }
++
++        for (i = 0; i < 3; ++i) {
++            for (j = 0; j < 9; ++j) {
++                this.a(new Slot(iinventory, j + i * 9 + 9, 8 + j * 18, 84 + i * 18));
++            }
++        }
++
++        for (i = 0; i < 9; ++i) {
++            this.a(new Slot(iinventory, i, 8 + i * 18, 142));
++        }
++    }
++
++    public boolean b(EntityHuman entityhuman) {
++        return this.a.a_(entityhuman);
++    }
++}
+diff --git a/src/main/java/net/minecraft/server/ContainerFurnace.java b/src/main/java/net/minecraft/server/ContainerFurnace.java
+new file mode 100644
+index 000000000..f5e9ebab0
+--- /dev/null
++++ b/src/main/java/net/minecraft/server/ContainerFurnace.java
+@@ -0,0 +1,99 @@
++package net.minecraft.server;
++
++public class ContainerFurnace extends Container {
++
++    private TileEntityFurnace a;
++    private int b = 0;
++    private int c = 0;
++    private int h = 0;
++
++    public ContainerFurnace(InventoryPlayer inventoryplayer, TileEntityFurnace tileentityfurnace) {
++        this.containerLocation = tileentityfurnace.getLocation();
++
++        this.a = tileentityfurnace;
++        this.a(new Slot(tileentityfurnace, 0, 56, 17));
++        this.a(new Slot(tileentityfurnace, 1, 56, 53));
++        this.a(new SlotResult2(inventoryplayer.d, tileentityfurnace, 2, 116, 35));
++
++        int i;
++
++        for (i = 0; i < 3; ++i) {
++            for (int j = 0; j < 9; ++j) {
++                this.a(new Slot(inventoryplayer, j + i * 9 + 9, 8 + j * 18, 84 + i * 18));
++            }
++        }
++
++        for (i = 0; i < 9; ++i) {
++            this.a(new Slot(inventoryplayer, i, 8 + i * 18, 142));
++        }
++    }
++
++    public void a(ICrafting icrafting) {
++        super.a(icrafting);
++        icrafting.a(this, 0, this.a.cookTime);
++        icrafting.a(this, 1, this.a.burnTime);
++        icrafting.a(this, 2, this.a.ticksForCurrentFuel);
++    }
++
++    public void a() {
++        super.a();
++
++        for (int i = 0; i < this.listeners.size(); ++i) {
++            ICrafting icrafting = (ICrafting) this.listeners.get(i);
++
++            if (this.b != this.a.cookTime) {
++                icrafting.a(this, 0, this.a.cookTime);
++            }
++
++            if (this.c != this.a.burnTime) {
++                icrafting.a(this, 1, this.a.burnTime);
++            }
++
++            if (this.h != this.a.ticksForCurrentFuel) {
++                icrafting.a(this, 2, this.a.ticksForCurrentFuel);
++            }
++        }
++
++        this.b = this.a.cookTime;
++        this.c = this.a.burnTime;
++        this.h = this.a.ticksForCurrentFuel;
++    }
++
++    public boolean b(EntityHuman entityhuman) {
++        return this.a.a_(entityhuman);
++    }
++
++    public ItemStack a(int i) {
++        ItemStack itemstack = null;
++        Slot slot = (Slot) this.e.get(i);
++
++        if (slot != null && slot.b()) {
++            ItemStack itemstack1 = slot.getItem();
++
++            itemstack = itemstack1.cloneItemStack();
++            if (i == 2) {
++                this.a(itemstack1, 3, 39, true);
++            } else if (i >= 3 && i < 30) {
++                this.a(itemstack1, 30, 39, false);
++            } else if (i >= 30 && i < 39) {
++                this.a(itemstack1, 3, 30, false);
++            } else {
++                this.a(itemstack1, 3, 39, false);
++            }
++
++            if (itemstack1.count == 0) {
++                slot.c((ItemStack) null);
++            } else {
++                slot.c();
++            }
++
++            if (itemstack1.count == itemstack.count) {
++                return null;
++            }
++
++            slot.a(itemstack1);
++        }
++
++        return itemstack;
++    }
++}
+diff --git a/src/main/java/net/minecraft/server/EntityMinecart.java b/src/main/java/net/minecraft/server/EntityMinecart.java
+index 32c583fa2..c472e0928 100644
+--- a/src/main/java/net/minecraft/server/EntityMinecart.java
++++ b/src/main/java/net/minecraft/server/EntityMinecart.java
+@@ -14,6 +14,8 @@ import org.bukkit.event.vehicle.VehicleMoveEvent;
+ import org.bukkit.event.vehicle.VehicleUpdateEvent;
+ // CraftBukkit end
+ 
++import org.bukkit.Location; // Canyon
++
+ public class EntityMinecart extends Entity implements IInventory {
+ 
+     private ItemStack[] items;
+@@ -60,6 +62,12 @@ public class EntityMinecart extends Entity implements IInventory {
+         this.height = this.width / 2.0F;
+     }
+ 
++    // Canyon start
++    public Location getLocation() {
++        return null;
++    }
++    // Canyon end
++
+     protected boolean n() {
+         return false;
+     }
+diff --git a/src/main/java/net/minecraft/server/IInventory.java b/src/main/java/net/minecraft/server/IInventory.java
+index bb6ce82f0..0131e1ecc 100644
+--- a/src/main/java/net/minecraft/server/IInventory.java
++++ b/src/main/java/net/minecraft/server/IInventory.java
+@@ -1,5 +1,7 @@
+ package net.minecraft.server;
+ 
++import org.bukkit.Location; // Canyon
++
+ public interface IInventory {
+ 
+     int getSize();
+@@ -19,4 +21,5 @@ public interface IInventory {
+     boolean a_(EntityHuman entityhuman);
+ 
+     public abstract ItemStack[] getContents(); // CraftBukkit
++    public Location getLocation(); // DOESN'T WORK WITH CRAFTINGS, ACTUAL PLAYER INVENTORIES OR MINECARTS // Canyon
+ }
+diff --git a/src/main/java/net/minecraft/server/InventoryCraftResult.java b/src/main/java/net/minecraft/server/InventoryCraftResult.java
+index 2d0964f96..988a79b3e 100644
+--- a/src/main/java/net/minecraft/server/InventoryCraftResult.java
++++ b/src/main/java/net/minecraft/server/InventoryCraftResult.java
+@@ -1,5 +1,7 @@
+ package net.minecraft.server;
+ 
++import org.bukkit.Location; // Canyon
++
+ public class InventoryCraftResult implements IInventory {
+ 
+     private ItemStack[] items = new ItemStack[1];
+@@ -12,6 +14,12 @@ public class InventoryCraftResult implements IInventory {
+ 
+     public InventoryCraftResult() {}
+ 
++    // Canyon start
++    public Location getLocation() {
++        return null;
++    }
++    // Canyon end
++
+     public int getSize() {
+         return 1;
+     }
+diff --git a/src/main/java/net/minecraft/server/InventoryCrafting.java b/src/main/java/net/minecraft/server/InventoryCrafting.java
+index 9151b8bf3..06b8bd127 100644
+--- a/src/main/java/net/minecraft/server/InventoryCrafting.java
++++ b/src/main/java/net/minecraft/server/InventoryCrafting.java
+@@ -1,5 +1,7 @@
+ package net.minecraft.server;
+ 
++import org.bukkit.Location; // Canyon
++
+ public class InventoryCrafting implements IInventory {
+ 
+     private ItemStack[] items;
+@@ -20,6 +22,12 @@ public class InventoryCrafting implements IInventory {
+         this.b = i;
+     }
+ 
++    // Canyon start
++    public Location getLocation() {
++        return null;
++    }
++    // Canyon end
++
+     public int getSize() {
+         return this.items.length;
+     }
+diff --git a/src/main/java/net/minecraft/server/InventoryLargeChest.java b/src/main/java/net/minecraft/server/InventoryLargeChest.java
+index 15dcdd8aa..3e781a7a9 100644
+--- a/src/main/java/net/minecraft/server/InventoryLargeChest.java
++++ b/src/main/java/net/minecraft/server/InventoryLargeChest.java
+@@ -1,5 +1,7 @@
+ package net.minecraft.server;
+ 
++import org.bukkit.Location; // Canyon
++
+ public class InventoryLargeChest implements IInventory {
+ 
+     private String a;
+@@ -22,6 +24,12 @@ public class InventoryLargeChest implements IInventory {
+         this.c = iinventory1;
+     }
+ 
++    // Canyon start
++    public Location getLocation() {
++        return this.b.getLocation();
++    }
++    // Canyon end
++
+     public int getSize() {
+         return this.b.getSize() + this.c.getSize();
+     }
+diff --git a/src/main/java/net/minecraft/server/InventoryPlayer.java b/src/main/java/net/minecraft/server/InventoryPlayer.java
+index f25e699b2..5d4172763 100644
+--- a/src/main/java/net/minecraft/server/InventoryPlayer.java
++++ b/src/main/java/net/minecraft/server/InventoryPlayer.java
+@@ -1,5 +1,7 @@
+ package net.minecraft.server;
+ 
++import org.bukkit.Location; // Canyon
++
+ public class InventoryPlayer implements IInventory {
+ 
+     public ItemStack[] items = new ItemStack[36];
+@@ -23,6 +25,12 @@ public class InventoryPlayer implements IInventory {
+         this.d = entityhuman;
+     }
+ 
++    // Canyon start
++    public Location getLocation() {
++        return null;
++    }
++    // Canyon end
++
+     public ItemStack getItemInHand() {
+         return this.itemInHandIndex < 9 && this.itemInHandIndex >= 0 ? this.items[this.itemInHandIndex] : null;
+     }
+diff --git a/src/main/java/net/minecraft/server/Slot.java b/src/main/java/net/minecraft/server/Slot.java
+index 18cc6a573..a2c271167 100644
+--- a/src/main/java/net/minecraft/server/Slot.java
++++ b/src/main/java/net/minecraft/server/Slot.java
+@@ -15,6 +15,23 @@ public class Slot {
+         this.c = k;
+     }
+ 
++    // Canyon start
++    // DOESN'T WORK WITH CRAFTINGS, ACTUAL PLAYER INVENTORIES OR MINECARTS
++    public boolean isNotPlayerInventory() {
++        if (this.inventory instanceof InventoryLargeChest) {
++            return this.index < 54;
++        } else if (this.inventory instanceof TileEntityChest) {
++            return this.index < 27;
++        } else if (this.inventory instanceof TileEntityDispenser) {
++            return this.index < 9;
++        } else if (this.inventory instanceof TileEntityFurnace) {
++            return this.index < 3;
++        } else {
++            return false;
++        }
++    }
++    // Canyon end
++
+     public void a(ItemStack itemstack) {
+         this.c();
+     }
+diff --git a/src/main/java/net/minecraft/server/TileEntity.java b/src/main/java/net/minecraft/server/TileEntity.java
+new file mode 100644
+index 000000000..79499d44d
+--- /dev/null
++++ b/src/main/java/net/minecraft/server/TileEntity.java
+@@ -0,0 +1,114 @@
++package net.minecraft.server;
++
++import java.util.HashMap;
++import java.util.Map;
++
++import org.bukkit.Location; // Canyon
++
++public class TileEntity {
++
++    private static Map a = new HashMap();
++    private static Map b = new HashMap();
++    public World world;
++    public int x;
++    public int y;
++    public int z;
++    protected boolean h;
++
++    public TileEntity() {}
++
++    // Canyon start
++    public Location getLocation() {
++        return new Location(this.world.getWorld(), this.x, this.y, this.z);
++    }
++    // Canyon end
++
++    private static void a(Class oclass, String s) {
++        if (b.containsKey(s)) {
++            throw new IllegalArgumentException("Duplicate id: " + s);
++        } else {
++            a.put(s, oclass);
++            b.put(oclass, s);
++        }
++    }
++
++    public void a(NBTTagCompound nbttagcompound) {
++        this.x = nbttagcompound.e("x");
++        this.y = nbttagcompound.e("y");
++        this.z = nbttagcompound.e("z");
++    }
++
++    public void b(NBTTagCompound nbttagcompound) {
++        String s = (String) b.get(this.getClass());
++
++        if (s == null) {
++            throw new RuntimeException(this.getClass() + " is missing a mapping! This is a bug!");
++        } else {
++            nbttagcompound.setString("id", s);
++            nbttagcompound.a("x", this.x);
++            nbttagcompound.a("y", this.y);
++            nbttagcompound.a("z", this.z);
++        }
++    }
++
++    public void g_() {}
++
++    public static TileEntity c(NBTTagCompound nbttagcompound) {
++        TileEntity tileentity = null;
++
++        try {
++            Class oclass = (Class) a.get(nbttagcompound.getString("id"));
++
++            if (oclass != null) {
++                tileentity = (TileEntity) oclass.newInstance();
++            }
++        } catch (Exception exception) {
++            exception.printStackTrace();
++        }
++
++        if (tileentity != null) {
++            tileentity.a(nbttagcompound);
++        } else {
++            System.out.println("Skipping TileEntity with id " + nbttagcompound.getString("id"));
++        }
++
++        return tileentity;
++    }
++
++    public int e() {
++        return this.world.getData(this.x, this.y, this.z);
++    }
++
++    public void update() {
++        if (this.world != null) {
++            this.world.b(this.x, this.y, this.z, this);
++        }
++    }
++
++    public Packet f() {
++        return null;
++    }
++
++    public boolean g() {
++        return this.h;
++    }
++
++    public void h() {
++        this.h = true;
++    }
++
++    public void j() {
++        this.h = false;
++    }
++
++    static {
++        a(TileEntityFurnace.class, "Furnace");
++        a(TileEntityChest.class, "Chest");
++        a(TileEntityRecordPlayer.class, "RecordPlayer");
++        a(TileEntityDispenser.class, "Trap");
++        a(TileEntitySign.class, "Sign");
++        a(TileEntityMobSpawner.class, "MobSpawner");
++        a(TileEntityNote.class, "Music");
++        a(TileEntityPiston.class, "Piston");
++    }
++}
+-- 
+2.43.0
+
