@@ -1,0 +1,32 @@
+From 34569419b52cc497ce57c3d42c576ad20d599675 Mon Sep 17 00:00:00 2001
+From: idealth <130112896+idealth@users.noreply.github.com>
+Date: Mon, 12 Feb 2024 12:00:00 -0400
+Subject: [PATCH] Strip unnecessary code from dependencies
+
+
+diff --git a/pom.xml b/pom.xml
+index c37ec7fef..ca95e42d6 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -200,7 +200,18 @@
+       <plugin>
+         <groupId>org.apache.maven.plugins</groupId>
+         <artifactId>maven-shade-plugin</artifactId>
+-        <version>3.2.1</version>
++        <version>3.5.1</version>
++        <configuration>
++          <minimizeJar>true</minimizeJar>
++          <filters>
++            <filter>
++              <artifact>com.canyonmodded:canyon-api</artifact>
++              <includes>
++                <include>**</include>
++              </includes>
++            </filter>
++          </filters>
++        </configuration>
+         <executions>
+           <execution>
+             <phase>package</phase>
+-- 
+2.43
