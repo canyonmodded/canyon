@@ -15,7 +15,6 @@ OR!
 
 ## Downloading
 
-Due to legal issues from cb, we can not really set this as default or post builds here.
 You can download them [Here.](https://jenkins.glass-launcher.net/job/Canyon/)
 Or check our discord when jenkins fails to login and properly build.
 
