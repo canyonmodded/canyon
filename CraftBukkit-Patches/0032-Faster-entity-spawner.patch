@@ -1,0 +1,87 @@
+From 1cd409153c80bca46be67362696f6379027c1fd7 Mon Sep 17 00:00:00 2001
+From: idealth <130112896+idealth@users.noreply.github.com>
+Date: Wed, 14 Feb 2024 12:00:00 -0400
+Subject: [PATCH] Faster entity spawner
+
+Normally the SpawnerCreature class will spawn entities within 8 chunks regardless of the render distance.
+This patch breaks vanilla-behavior hence why it adds a configuration option.
+
+diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
+index de27ef58f..56e2273ba 100644
+--- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
++++ b/src/main/java/com/canyonmodded/config/CanyonConfig.java
+@@ -7,6 +7,7 @@ import java.io.File;
+ public class CanyonConfig {
+     // Add settings here. Make sure they're public visibility!
+     public static boolean useNewNetworkingStack = false;
++    public static boolean fasterEntitySpawner = false;
+     public static int maxOutstandingChunks = 2;
+     public static int autoSave = 6000;
+     public static boolean asyncChunkLoading = false;
+@@ -21,6 +22,7 @@ public class CanyonConfig {
+ 
+         // Load settings here.
+         useNewNetworkingStack = configuration.getBoolean("settings.use-new-networking-stack", false);
++        fasterEntitySpawner = configuration.getBoolean("settings.use-faster-entity-spawner", false);
+         maxOutstandingChunks = configuration.getInt("settings.max-outstanding-chunks", maxOutstandingChunks);
+         autoSave = configuration.getInt("settings.auto-save-every", 6000);
+         asyncChunkLoading = configuration.getBoolean("settings.async-chunk-loading", false);
+diff --git a/src/main/java/net/minecraft/server/SpawnerCreature.java b/src/main/java/net/minecraft/server/SpawnerCreature.java
+index fda0a0909..9b5e51597 100644
+--- a/src/main/java/net/minecraft/server/SpawnerCreature.java
++++ b/src/main/java/net/minecraft/server/SpawnerCreature.java
+@@ -29,6 +29,8 @@ public final class SpawnerCreature {
+         } else {
+             b.clear();
+ 
++            int viewDistance = com.canyonmodded.config.CanyonConfig.fasterEntitySpawner ? world.getServer().getViewDistance() : 8; // Canyon
++
+             int i;
+             int j;
+ 
+@@ -37,11 +39,19 @@ public final class SpawnerCreature {
+                 int k = MathHelper.floor(entityhuman.locX / 16.0D);
+ 
+                 j = MathHelper.floor(entityhuman.locZ / 16.0D);
+-                byte b0 = 8;
++                byte b0 = (byte) viewDistance; // Canyon - tick only based on view distance
+ 
+                 for (int l = -b0; l <= b0; ++l) {
+                     for (int i1 = -b0; i1 <= b0; ++i1) {
+-                        b.add(new ChunkCoordIntPair(l + k, i1 + j));
++                        // Canyon Start - Don't spawn mobs in unloaded chunks
++                        if (com.canyonmodded.config.CanyonConfig.fasterEntitySpawner) {
++                            if (world.isChunkLoaded(l + k, i1 + j)) {
++                                b.add(new ChunkCoordIntPair(l + k, i1 + j));
++                            }
++                        } else {
++                            b.add(new ChunkCoordIntPair(l + k, i1 + j));
++                        }
++                        // Canyon End
+                     }
+                 }
+             }
+@@ -55,7 +65,7 @@ public final class SpawnerCreature {
+             for (int j1 = 0; j1 < j; ++j1) {
+                 EnumCreatureType enumcreaturetype = aenumcreaturetype[j1];
+ 
+-                if ((!enumcreaturetype.d() || flag1) && (enumcreaturetype.d() || flag) && world.a(enumcreaturetype.a()) <= enumcreaturetype.b() * b.size() / 256) {
++                if ((!enumcreaturetype.d() || flag1) && (enumcreaturetype.d() || flag) && world.a(enumcreaturetype.a()) <= enumcreaturetype.b() * b.size() / (com.canyonmodded.config.CanyonConfig.fasterEntitySpawner ? viewDistance * viewDistance * 4 : 256)) { // Canyon
+                     Iterator iterator = b.iterator();
+ 
+                     label113:
+diff --git a/src/main/java/net/minecraft/server/World.java b/src/main/java/net/minecraft/server/World.java
+index c5b1e670c..c5cee2d6e 100644
+--- a/src/main/java/net/minecraft/server/World.java
++++ b/src/main/java/net/minecraft/server/World.java
+@@ -262,7 +262,7 @@ public class World implements IBlockAccess {
+         }
+     }
+ 
+-    private boolean isChunkLoaded(int i, int j) {
++    protected boolean isChunkLoaded(int i, int j) { // Canyon
+         return this.chunkProvider.isChunkLoaded(i, j);
+     }
+ 
+-- 
+2.43
