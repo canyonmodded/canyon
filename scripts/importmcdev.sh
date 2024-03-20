@@ -44,6 +44,11 @@ import BlockGrass
 import BlockFlowing
 import Packet10Flying
 import ChunkLoader
+import Container
+import ContainerChest
+import ContainerDispenser
+import ContainerFurnace
+import TileEntity
 
 cd "$basedir/CraftBukkit"
 $gitcmd add . -A >/dev/null 2>&1

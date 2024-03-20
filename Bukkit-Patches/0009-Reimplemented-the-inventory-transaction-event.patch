@@ -1,0 +1,118 @@
+From 2df4e3050220ccfb48592778d254ef2124fd1623 Mon Sep 17 00:00:00 2001
+From: Blayung <gpewojan1@gmail.com>
+Date: Sat, 17 Feb 2024 12:52:14 +0100
+Subject: [PATCH] Reimplemented the inventory transaction event
+
+
+diff --git a/src/main/java/org/bukkit/event/inventory/InventoryListener.java b/src/main/java/org/bukkit/event/inventory/InventoryListener.java
+index 83e7e6d5..bffb9e38 100644
+--- a/src/main/java/org/bukkit/event/inventory/InventoryListener.java
++++ b/src/main/java/org/bukkit/event/inventory/InventoryListener.java
+@@ -20,4 +20,11 @@ public class InventoryListener implements Listener {
+      * @param event Relevant event details
+      */
+     public void onFurnaceBurn(FurnaceBurnEvent event) {}
++
++    /**
++     * Called when a player steals or puts something into a chest/dispenser/furnace.
++     *
++     * @param event Relevant event details
++     */
++    public void onTransaction(TransactionEvent event) {}
+ }
+diff --git a/src/main/java/org/bukkit/event/inventory/TransactionEvent.java b/src/main/java/org/bukkit/event/inventory/TransactionEvent.java
+new file mode 100644
+index 00000000..c5c18f0d
+--- /dev/null
++++ b/src/main/java/org/bukkit/event/inventory/TransactionEvent.java
+@@ -0,0 +1,70 @@
++package org.bukkit.event.inventory;
++
++import org.bukkit.event.Event;
++import org.bukkit.Location;
++import org.bukkit.entity.Player;
++import org.bukkit.inventory.ItemStack;
++
++/**
++ * Called when a player steals or puts something into a chest/dispenser/furnace.
++ */
++public class TransactionEvent extends Event {
++    private Location containerLocation;
++    private Player player;
++    private ItemStack transferredItemStack;
++    private boolean isStolen;
++
++    public TransactionEvent(Location containerLocation, Player player, ItemStack transferredItemStack, boolean isStolen) {
++        super(Type.INVENTORY_TRANSACTION);
++
++        this.containerLocation = containerLocation;
++        this.player = player;
++        this.transferredItemStack = transferredItemStack;
++        this.isStolen = isStolen;
++    }
++
++    /**
++     * Gets the location of the container involved in the event
++     *
++     * @return the location of the container involved in the event
++     */
++    public Location getContainerLocation() {
++        return containerLocation;
++    }
++
++    /**
++     * Gets the player involved in the event
++     *
++     * @return the player involved in the event
++     */
++    public Player getPlayer() {
++        return player;
++    }
++
++    /**
++     * Gets the items involved in the event
++     *
++     * @return the item stack involved in the event
++     */
++    public ItemStack getItemStack() {
++        return transferredItemStack;
++    }
++
++    /**
++     * Is the player stealing the items? Reverse of {@link TransactionEvent#isPut() isPut()}
++     *
++     * @return whether the items are being stolen
++     */
++    public boolean isStolen() {
++        return isStolen;
++    }
++
++    /**
++     * Is the player putting the items in? Reverse of {@link TransactionEvent#isStolen() isStolen()}
++     *
++     * @return whether the items are being put in
++     */
++    public boolean isPut() {
++        return !isStolen;
++    }
++}
+diff --git a/src/main/java/org/bukkit/plugin/java/JavaPluginLoader.java b/src/main/java/org/bukkit/plugin/java/JavaPluginLoader.java
+index a320e49e..fd5c08e1 100644
+--- a/src/main/java/org/bukkit/plugin/java/JavaPluginLoader.java
++++ b/src/main/java/org/bukkit/plugin/java/JavaPluginLoader.java
+@@ -854,6 +854,12 @@ public class JavaPluginLoader implements PluginLoader {
+                     ((InventoryListener) listener).onFurnaceBurn((FurnaceBurnEvent) event);
+                 }
+             };
++        case INVENTORY_TRANSACTION:
++            return new EventExecutor() {
++                public void execute(Listener listener, Event event) {
++                    ((InventoryListener) listener).onTransaction((TransactionEvent) event);
++                }
++            };
+ 
+         // Custom Events
+         case CUSTOM_EVENT:
+-- 
+2.43.0
+
