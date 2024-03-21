@@ -1,0 +1,96 @@
+From 2179179f2c1c2785790cb62ef42aaa253bb0e6a8 Mon Sep 17 00:00:00 2001
+From: idealth <130112896+idealth@users.noreply.github.com>
+Date: Thu, 15 Feb 2024 12:00:00 -0400
+Subject: [PATCH] Implement item merging
+
+Only check for lava every 25 ticks + implement item merging
+
+diff --git a/src/main/java/com/canyonmodded/config/CanyonConfig.java b/src/main/java/com/canyonmodded/config/CanyonConfig.java
+index 56e2273ba..b0d84826c 100644
+--- a/src/main/java/com/canyonmodded/config/CanyonConfig.java
++++ b/src/main/java/com/canyonmodded/config/CanyonConfig.java
+@@ -8,6 +8,7 @@ public class CanyonConfig {
+     // Add settings here. Make sure they're public visibility!
+     public static boolean useNewNetworkingStack = false;
+     public static boolean fasterEntitySpawner = false;
++    public static boolean mergeDroppedItems = false;
+     public static int maxOutstandingChunks = 2;
+     public static int autoSave = 6000;
+     public static boolean asyncChunkLoading = false;
+@@ -23,6 +24,7 @@ public class CanyonConfig {
+         // Load settings here.
+         useNewNetworkingStack = configuration.getBoolean("settings.use-new-networking-stack", false);
+         fasterEntitySpawner = configuration.getBoolean("settings.use-faster-entity-spawner", false);
++        mergeDroppedItems = configuration.getBoolean("settings.merge-dropped-items", false);
+         maxOutstandingChunks = configuration.getInt("settings.max-outstanding-chunks", maxOutstandingChunks);
+         autoSave = configuration.getInt("settings.auto-save-every", 6000);
+         asyncChunkLoading = configuration.getBoolean("settings.async-chunk-loading", false);
+diff --git a/src/main/java/net/minecraft/server/EntityItem.java b/src/main/java/net/minecraft/server/EntityItem.java
+index d944acecf..9e1084e3b 100644
+--- a/src/main/java/net/minecraft/server/EntityItem.java
++++ b/src/main/java/net/minecraft/server/EntityItem.java
+@@ -1,6 +1,7 @@
+ package net.minecraft.server;
+ 
+ import org.bukkit.event.player.PlayerPickupItemEvent; // CraftBukkit
++import java.util.Iterator; // Canyon
+ 
+ public class EntityItem extends Entity {
+ 
+@@ -53,15 +54,48 @@ public class EntityItem extends Entity {
+         this.lastY = this.locY;
+         this.lastZ = this.locZ;
+         this.motY -= 0.03999999910593033D;
+-        if (this.world.getMaterial(MathHelper.floor(this.locX), MathHelper.floor(this.locY), MathHelper.floor(this.locZ)) == Material.LAVA) {
+-            this.motY = 0.20000000298023224D;
+-            this.motX = (double) ((this.random.nextFloat() - this.random.nextFloat()) * 0.2F);
+-            this.motZ = (double) ((this.random.nextFloat() - this.random.nextFloat()) * 0.2F);
+-            this.world.makeSound(this, "random.fizz", 0.4F, 2.0F + this.random.nextFloat() * 0.4F);
+-        }
+ 
+         this.g(this.locX, (this.boundingBox.b + this.boundingBox.e) / 2.0D, this.locZ);
+         this.move(this.motX, this.motY, this.motZ);
++
++        // Canyon start - merge items & only check for lava every 25 ticks
++        boolean itemMoved = (int)this.lastX != (int)this.locX || (int)this.lastY != (int)this.locY || (int)this.lastZ != (int)this.locZ;
++        if(itemMoved || this.ticksLived % 25 == 0) {
++            if (this.world.getMaterial(MathHelper.floor(this.locX), MathHelper.floor(this.locY), MathHelper.floor(this.locZ)) == Material.LAVA) {
++                this.motY = 0.20000000298023224D;
++                this.motX = (double) ((this.random.nextFloat() - this.random.nextFloat()) * 0.2F);
++                this.motZ = (double) ((this.random.nextFloat() - this.random.nextFloat()) * 0.2F);
++                this.world.makeSound(this, "random.fizz", 0.4F, 2.0F + this.random.nextFloat() * 0.4F);
++            }
++
++            if (com.canyonmodded.config.CanyonConfig.mergeDroppedItems) {
++                Iterator entityList = this.world.a(EntityItem.class, this.boundingBox.b(0.5D, 0.0D, 0.5D)).iterator();
++
++                while(entityList.hasNext()) {
++                    EntityItem itemEntity = (EntityItem)entityList.next();
++
++                    if (itemEntity != this && !this.dead && !itemEntity.dead) {
++                        ItemStack itemEntityStack = itemEntity.itemStack;
++                        ItemStack thisItemStack = this.itemStack;
++
++                        if(thisItemStack.getItem() == itemEntityStack.getItem()) {
++                            int totalItemCount = thisItemStack.count + itemEntityStack.count;
++
++                            if (totalItemCount < thisItemStack.getMaxStackSize()) {
++                                itemEntity.pickupDelay = Math.max(itemEntity.pickupDelay, this.pickupDelay);
++                                itemEntityStack.count = totalItemCount;
++                                itemEntity.b = 0;
++
++                                this.die();
++                                return;
++                            }
++                        }
++                    }
++                }
++            }
++        }
++        // Canyon end
++
+         float f = 0.98F;
+ 
+         if (this.onGround) {
+-- 
+2.43

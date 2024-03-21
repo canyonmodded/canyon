@@ -1,0 +1,23 @@
+From f8ab51fe76c4e65fd51bdc6cace09f4b0b1d3f1e Mon Sep 17 00:00:00 2001
+From: idealth <130112896+idealth@users.noreply.github.com>
+Date: Sun, 11 Feb 2024 12:00:00 -0400
+Subject: [PATCH] Ignore unnecessary entity move calls
+
+
+diff --git a/src/main/java/net/minecraft/server/Entity.java b/src/main/java/net/minecraft/server/Entity.java
+index 7aa912c00..433491265 100644
+--- a/src/main/java/net/minecraft/server/Entity.java
++++ b/src/main/java/net/minecraft/server/Entity.java
+@@ -337,6 +337,10 @@ public abstract class Entity {
+     }
+ 
+     public void move(double d0, double d1, double d2) {
++        if (d0 == 0 && d1 == 0 && d2 == 0) { // Canyon - Return unnecessary calls to move
++            return;
++        }
++
+         if (this.bt) {
+             this.boundingBox.d(d0, d1, d2);
+             this.locX = (this.boundingBox.a + this.boundingBox.d) / 2.0D;
+-- 
+2.43

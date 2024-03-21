@@ -1,0 +1,23 @@
+From 33b37d21c9a93f76f21005e2de7a43b7fbba75ef Mon Sep 17 00:00:00 2001
+From: idealth <130112896+idealth@users.noreply.github.com>
+Date: Sun, 11 Feb 2024 12:00:00 -0400
+Subject: [PATCH] Only tick loaded chunks
+
+
+diff --git a/src/main/java/net/minecraft/server/World.java b/src/main/java/net/minecraft/server/World.java
+index 1d4ad1661..c5b1e670c 100644
+--- a/src/main/java/net/minecraft/server/World.java
++++ b/src/main/java/net/minecraft/server/World.java
+@@ -1864,7 +1864,9 @@ public class World implements IBlockAccess {
+ 
+             for (k = -b0; k <= b0; ++k) {
+                 for (l = -b0; l <= b0; ++l) {
+-                    this.P.add(new ChunkCoordIntPair(k + i, l + j));
++                    if (this.isChunkLoaded(k + i, l + j)) { // Canyon - only tick loaded chunks
++                        this.P.add(new ChunkCoordIntPair(k + i, l + j));
++                    }
+                 }
+             }
+         }
+-- 
+2.43
